@@ -1,0 +1,16 @@
+/* global.css
+ *
+ * This file bootstraps NativeWind / Tailwind CSS.
+ *
+ * The three @tailwind directives are processed by PostCSS at build time:
+ *   - base:       resets browser/native default styles
+ *   - components: any component-level classes (we don't use these manually)
+ *   - utilities:  all the utility classes like text-red-500, p-4, etc.
+ *
+ * We import this file ONCE in App.tsx. NativeWind's metro transformer
+ * intercepts the import and wires everything up.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

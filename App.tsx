@@ -36,6 +36,9 @@ import { StatusBar } from "expo-status-bar";
 import { db, runMigrations } from "./src/db";
 import { colors } from "./src/theme";
 import { CustomerListScreen } from "./src/screens/CustomerListScreen";
+import { TransactionScreen } from "./src/screens/TransactionScreen";
+import { getAllCustomers } from "./src/repositories/customers";
+import { Customer } from "./src/types";
 
 // ─── Migration State ───────────────────────────────────────────────────────────
 
@@ -48,6 +51,12 @@ export default function App() {
   const [migrationError, setMigrationError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0); // incrementing this re-triggers the useEffect
 
+  // ── DAY 3 TEST SCAFFOLDING ──────────────────────────────────────────────────
+  // Temporarily fetch the first customer so we can render TransactionScreen.
+  // This wiring will be REMOVED on Day 5 when React Navigation is added.
+  // We'll replace it with a proper navigation stack and route params.
+  const [testCustomer, setTestCustomer] = useState<Customer | null>(null);
+
   // ── Run migrations on mount ───────────────────────────────────────────────
   // useEffect with [] runs exactly once — when the component first mounts.
   // We can't make the effect itself async (React restriction), so we define
@@ -58,6 +67,14 @@ export default function App() {
       try {
         setMigrationState("running");
         await runMigrations(db);
+
+        // DAY 3 SCAFFOLDING: fetch first customer to test TransactionScreen.
+        // getAllCustomers returns [] if no customers yet — testCustomer stays null.
+        const customers = await getAllCustomers(db);
+        if (customers.length > 0) {
+          setTestCustomer(customers[0]);
+        }
+
         setMigrationState("done");
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
@@ -114,12 +131,21 @@ export default function App() {
   }
 
   // ── Main app ──────────────────────────────────────────────────────────────
-  // SafeAreaProvider must wrap the entire app so useSafeAreaInsets()
-  // can read the device's safe area (notch, home bar) inside any screen.
+  // DAY 3 SCAFFOLDING:
+  // If a customer exists, show TransactionScreen for testing.
+  // Otherwise fall back to CustomerListScreen (add a customer first!).
+  // On Day 5, replace this entire block with React Navigation stack.
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <CustomerListScreen />
+      {testCustomer ? (
+        <TransactionScreen
+          customer={testCustomer}
+          onBack={() => setTestCustomer(null)}
+        />
+      ) : (
+        <CustomerListScreen />
+      )}
     </SafeAreaProvider>
   );
 }

@@ -49,7 +49,10 @@ export interface Transaction {
   id: number;                  // Auto-incremented primary key
   customerId: number;          // Foreign key → customers.id
   type: TransactionType;       // "debt" or "payment"
-  amount: number;              // Always a positive number (e.g. 500, not -500)
+  amount: number;              // Stored in INTEGER CENTS — never float shillings.
+                               // 150 KES = 15000 cents. 75.50 KES = 7550 cents.
+                               // This prevents floating point errors (0.1+0.2 !== 0.3).
+                               // Always positive — the `type` field carries direction.
   note?: string;               // Optional description e.g. "maize flour x2"
   createdAt: string;           // ISO 8601 date string
 }

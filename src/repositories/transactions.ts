@@ -13,8 +13,12 @@ import { Transaction, NewTransaction } from '../types';
 /**
  * Inserts a new transaction (either a debt or a payment).
  *
+ * IMPORTANT: `amount` in NewTransaction MUST be in INTEGER CENTS.
+ *   150 KES → pass 15000, not 150.
+ * Use toCents() from src/utils/money.ts before calling this.
+ *
  * @param db             - The open SQLite database instance
- * @param newTransaction - Transaction data (customerId, type, amount, note)
+ * @param newTransaction - Transaction data (customerId, type, amount in CENTS, note)
  * @returns              - The auto-generated `id` of the new transaction row
  */
 export async function addTransaction(
@@ -85,7 +89,9 @@ export async function getTransactionsByCustomer(
  *
  * @param db         - The open SQLite database instance
  * @param customerId - The customer whose balance to compute
- * @returns          - A number: positive = owes money, 0 = settled
+ * @returns          - Balance in INTEGER CENTS. Positive = customer owes shop.
+ *                     Zero = settled. Negative = customer has overpaid.
+ *                     Use formatKES() to display this value.
  */
 export async function getBalanceForCustomer(
   db: SQLiteDatabase,

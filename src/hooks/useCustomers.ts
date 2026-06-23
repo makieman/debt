@@ -3,6 +3,18 @@
  *
  * A custom hook that manages the customer list state.
  *
+ * ─── DAY 4 UPDATE: N+1 FIX ────────────────────────────────────────────────────
+ * Before this change, useCustomers called getAllCustomers() (1 query) and then
+ * CustomerListScreen ran N additional getBalanceForCustomer() calls — one per
+ * customer. With 20 customers that's 21 SQL queries every time the screen loads.
+ *
+ * Now we call getAllCustomersWithBalances() — a single JOIN + GROUP BY query
+ * that returns customers AND their balances in one round-trip.
+ *   20 customers → before: 21 queries → after: 1 query
+ *
+ * The CustomerListScreen no longer needs its own balance-fetching useEffect.
+ * The CustomerCard receives `balance` from the hook result directly.
+ *
  * WHAT IS A CUSTOM HOOK?
  * It's just a regular function whose name starts with "use". By convention,
  * React will enforce the Rules of Hooks inside it (no conditional hook calls,
@@ -16,21 +28,21 @@
  * the same behaviour, same error handling, same loading state — for free.
  *
  * RETURNED SHAPE:
- *   customers  — the array from SQLite ([] while loading)
+ *   customers  — array of CustomerWithBalance (customer + balance in cents)
  *   loading    — true only during the first fetch; false once we have data
  *   error      — the Error object if something went wrong, null otherwise
  *   refresh    — call this to re-run the fetch (e.g. after adding a customer)
  */
 
-import { useState, useEffect, useCallback } from "react";
-import { Customer } from "../types";
-import { getAllCustomers } from "../repositories/customers";
-import { db } from "../db";
+import { useState, useEffect, useCallback } from 'react';
+import { CustomerWithBalance } from '../types';
+import { getAllCustomersWithBalances } from '../repositories/transactions';
+import { db } from '../db';
 
 // ─── Return Type ────────────────────────────────────────────────────────────
 
 interface UseCustomersResult {
-  customers: Customer[];
+  customers: CustomerWithBalance[];
   loading: boolean;
   error: Error | null;
   refresh: () => void;
@@ -39,7 +51,7 @@ interface UseCustomersResult {
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 export function useCustomers(): UseCustomersResult {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<CustomerWithBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -53,7 +65,9 @@ export function useCustomers(): UseCustomersResult {
     try {
       setLoading(true);
       setError(null); // clear any previous error before retrying
-      const rows = await getAllCustomers(db);
+      // DAY 4: getAllCustomersWithBalances replaces getAllCustomers + N balance queries.
+      // One SQL JOIN query returns customers + their balances together.
+      const rows = await getAllCustomersWithBalances(db);
       setCustomers(rows);
     } catch (err) {
       // Always store Error objects, never raw unknowns
@@ -63,7 +77,7 @@ export function useCustomers(): UseCustomersResult {
       // This guarantees loading goes false even if there's an error.
       setLoading(false);
     }
-  }, []); // [] because getAllCustomers and db are module-level constants
+  }, []); // [] because getAllCustomersWithBalances and db are module-level constants
 
   // ── Effect: fetch on mount ──────────────────────────────────────────────────
   // This runs once when the hook is first used by a component.

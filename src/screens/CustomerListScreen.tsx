@@ -32,7 +32,7 @@
  * For now, N individual queries is fine for small lists and keeps the code readable.
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -45,62 +45,29 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Customer } from "../types";
 import { colors } from "../theme";
 import { useCustomers } from "../hooks/useCustomers";
-import { getBalanceForCustomer } from "../repositories/transactions";
-import { db } from "../db";
 import { CustomerCard } from "../components/CustomerCard";
 import { EmptyState } from "../components/EmptyState";
 import { AddCustomerModal } from "../components/AddCustomerModal";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-// A map of customerId → their current balance
-type BalanceMap = Record<number, number>;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function CustomerListScreen() {
   const { customers, loading, error, refresh } = useCustomers();
+  // customers is now CustomerWithBalance[] — balance is included in each item
+  // (N+1 fix: was 1 query per customer for balance, now 1 total query)
   const insets = useSafeAreaInsets(); // respect notch / home bar safe area
 
   // ── State ─────────────────────────────────────────────────────────────────
-  const [balances, setBalances] = useState<BalanceMap>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
 
-  // ── Fetch balances for all customers after they load ──────────────────────
-  // WHY HERE and not in useCustomers?
-  // Because balances are a derived value that depends on customers existing.
-  // We could write a single SQL query (GROUP BY customerId) to get all balances
-  // in one round-trip — that's the Day 4 optimisation. For now, N sequential
-  // queries is fine and keeps each repository function single-purpose.
-  useEffect(() => {
-    if (customers.length === 0) {
-      setBalances({});
-      return;
-    }
-
-    async function fetchAllBalances() {
-      const map: BalanceMap = {};
-      // Promise.all runs all N queries concurrently (not sequentially).
-      // For 10 customers, this takes ~the time of 1 query, not 10.
-      await Promise.all(
-        customers.map(async (c) => {
-          map[c.id] = await getBalanceForCustomer(db, c.id);
-        })
-      );
-      setBalances(map);
-    }
-
-    fetchAllBalances();
-  }, [customers]); // re-run whenever the customers array changes
-
   // ── Derived: total owed across all customers ──────────────────────────────
   // Sum only positive balances (negative = overpaid, which we count as 0 owed)
-  const totalOwed = Object.values(balances).reduce(
-    (sum, b) => sum + Math.max(0, b),
+  const totalOwed = customers.reduce(
+    (sum, c) => sum + Math.max(0, c.balance),
     0
   );
 
@@ -121,10 +88,10 @@ export function CustomerListScreen() {
     refresh(); // re-fetch customer list after adding a new one
   }, [refresh]);
 
-  const handleCardPress = useCallback((customer: Customer) => {
+  const handleCardPress = useCallback((id: number, name: string) => {
     // Navigation to transaction screen comes on Day 5.
     // For now, log so we can confirm Pressable works.
-    console.log("Pressed:", customer.name);
+    console.log("Pressed:", name);
   }, []);
 
   // ── Render: loading state ─────────────────────────────────────────────────
@@ -225,8 +192,8 @@ export function CustomerListScreen() {
         renderItem={({ item }) => (
           <CustomerCard
             customer={item}
-            balance={balances[item.id] ?? 0}
-            onPress={() => handleCardPress(item)}
+            balance={item.balance}  // balance now comes from the JOIN query
+            onPress={() => handleCardPress(item.id, item.name)}
           />
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}

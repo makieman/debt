@@ -62,3 +62,70 @@ export interface Transaction {
  * Again, `id` and `createdAt` are omitted — SQLite handles them.
  */
 export type NewTransaction = Omit<Transaction, 'id' | 'createdAt'>;
+
+// ─── Dashboard Aggregation Types ─────────────────────────────────────────────
+
+/**
+ * A customer ranked by their outstanding balance.
+ *
+ * Produced by the `getTopDebtors` SQL query, which JOINs the customers and
+ * transactions tables and aggregates with GROUP BY. The database does the math;
+ * JavaScript just receives the final ranking.
+ *
+ * Fields:
+ *   customerId — matches customers.id (used for navigation on press)
+ *   name       — customer's display name (from the JOIN, avoids a 2nd query)
+ *   balance    — net amount owed IN CENTS. Always > 0 (we filter with HAVING)
+ */
+export interface TopDebtor {
+  customerId: number;
+  name: string;
+  balance: number; // in cents
+}
+
+/**
+ * A single transaction enriched with the owning customer's name.
+ *
+ * The `getRecentActivity` query JOINs transactions → customers so that the
+ * Dashboard feed can show "Kamau added KES 500" without a second lookup.
+ *
+ * This is the "resolved" form of Transaction — everything a UI row needs.
+ */
+export interface ActivityItem {
+  transactionId: number;
+  customerId: number;
+  customerName: string;
+  type: 'debt' | 'payment';
+  amount: number;      // in cents
+  note: string | null;
+  createdAt: string;   // ISO 8601 UTC
+}
+
+/**
+ * A single point of data for the weekly bar chart.
+ *
+ *   date  — "YYYY-MM-DD" (e.g. "2026-06-21") — produced by SQLite strftime()
+ *   total — total debt recorded on that day, IN CENTS
+ *
+ * Note: if no transactions exist on a day, the SQL query omits that day entirely.
+ * The `fillMissingDays` JS function in the repository fills gaps with { total: 0 }
+ * so the chart always has exactly 7 bars.
+ */
+export interface DailyTotal {
+  date: string;  // "YYYY-MM-DD"
+  total: number; // in cents
+}
+
+/**
+ * A customer combined with their current outstanding balance.
+ *
+ * Produced by `getAllCustomersWithBalances`, which replaces the old N+1 pattern
+ * in CustomerListScreen. Instead of 1 query per customer for their balance, a
+ * single JOIN + GROUP BY returns all customers + all balances in one shot.
+ *
+ * The balance can be 0 (settled) or negative (overpaid). We treat both as
+ * "no debt" in the UI.
+ */
+export interface CustomerWithBalance extends Customer {
+  balance: number; // in cents. 0 = settled. > 0 = owes money.
+}

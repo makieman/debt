@@ -89,3 +89,59 @@ export function formatKES(cents: number): string {
   });
   return `KES ${formatted}`;
 }
+
+// ─── Compact Formatter (for chart labels) ────────────────────────────────────
+
+/**
+ * Formats a cent amount as a SHORT label for the weekly bar chart.
+ *
+ * WHY A SEPARATE FORMATTER?
+ * formatKES produces "KES 1,200.00" — 11 characters. A bar chart bar on a
+ * phone screen is typically 30–50px wide. "KES 1,200.00" at 12sp font is
+ * about 80px wide — it would collide with neighbouring bars and be unreadable.
+ *
+ * Compact labels:
+ *   < 1,000 cents (< KES 10)        → "0"           (effectively nothing)
+ *   1,000–99,999 cents (KES 10–999) → "10" .. "999" (raw shillings, no decimal)
+ *   100,000–999,999 cents (KES 1K–9.9K) → "1.0K" .. "9.9K"
+ *   ≥ 1,000,000 cents (≥ KES 10K)   → "10K+"
+ *
+ * Note: these are KES shilling values displayed, not cent values.
+ * "1.2K" means KES 1,200 (120,000 cents).
+ *
+ * ─── Common mistake ───────────────────────────────────────────────────────────
+ * Developers forget that cents ≠ shillings. Writing:
+ *   if (cents < 1000) return "0"
+ * would display "0" for KES 1 through KES 9 (100–999 cents).
+ * We threshold in CENTS but the display is in SHILLINGS.
+ *
+ * Examples:
+ *   formatKESShort(0)       → "0"
+ *   formatKESShort(50000)   → "500"    (KES 500)
+ *   formatKESShort(120000)  → "1.2K"   (KES 1,200)
+ *   formatKESShort(9950000) → "99.5K"  (KES 99,500)
+ *   formatKESShort(1000000) → "10K+"   (KES 10,000 and above ... shown as 10K+)
+ */
+export function formatKESShort(cents: number): string {
+  if (cents < 1000) {
+    // Less than KES 10 — not meaningful to display on a bar chart
+    return '0';
+  }
+
+  const shillings = cents / 100;
+
+  if (cents < 100_000) {
+    // KES 10 – KES 999: show whole shillings (no decimal noise)
+    return String(Math.round(shillings));
+  }
+
+  if (cents < 10_000_000) {
+    // KES 1,000 – KES 99,999: show as "1.0K" – "99.9K"
+    const k = shillings / 1000;
+    return `${k.toFixed(1)}K`;
+  }
+
+  // KES 100,000 and above: just show "100K+"
+  return '100K+';
+}
+

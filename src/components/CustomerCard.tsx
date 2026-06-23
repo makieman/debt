@@ -18,6 +18,7 @@ import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Customer } from "../types";
 import { colors } from "../theme";
+import { getInitials } from "../utils/strings"; // ← shared util (refactored from local copy)
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -25,25 +26,6 @@ interface CustomerCardProps {
   customer: Customer;
   balance: number;
   onPress: () => void;
-}
-
-// ─── Helper: derive initials from a name string ───────────────────────────────
-// We handle edge cases defensively so the app never crashes on unusual names.
-//
-// "Kamau Wanjiku"  → "KW"
-// "Mumbua"         → "M"   (single word — only one initial)
-// ""               → "?"   (empty string — fallback character)
-
-function getInitials(name: string): string {
-  const trimmed = name.trim();
-  if (!trimmed) return "?";
-
-  const words = trimmed.split(/\s+/); // split on any whitespace (handles double spaces)
-  const first = words[0]?.[0]?.toUpperCase() ?? "";
-  const second = words[1]?.[0]?.toUpperCase() ?? "";
-
-  return first + second || "?";
-  // If first is empty (shouldn't happen after trim check), fall back to "?"
 }
 
 // ─── Helper: format KES amount ────────────────────────────────────────────────

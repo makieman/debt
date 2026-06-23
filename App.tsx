@@ -1,23 +1,36 @@
 /**
- * App.tsx — DAY 2 PRODUCTION BUILD
+ * App.tsx — DAY 4 BUILD
  *
- * Replaces the Day 1 test harness.
- *
- * RESPONSIBILITIES:
+ * RESPONSIBILITIES (same as Day 2 + Day 3 + Day 4 additions):
  *   1. Import global.css (MUST be first — initialises NativeWind)
- *   2. Run database migrations on mount (tables must exist before screens use them)
- *   3. Wrap the app in SafeAreaProvider (needed for useSafeAreaInsets in screens)
- *   4. Show a loading indicator while migrations run
- *   5. Show an error screen if migrations fail (rare but defensive)
- *   6. Render CustomerListScreen once migrations are complete
+ *   2. Run database migrations on mount
+ *   3. Wrap the app in SafeAreaProvider
+ *   4. Show loading / error states during migrations
+ *   5. Render a temporary screen switcher (Dashboard | Customers)
+ *   6. Keep the Day 3 customer→TransactionScreen wiring
  *
- * WHY WAIT FOR MIGRATIONS?
- * CustomerListScreen calls getAllCustomers(db) the moment it mounts.
- * If the customers table doesn't exist yet, that SQL throws:
- *   "no such table: customers"
- * Running migrations first guarantees all tables exist before any screen
- * touches the database. After the first run, subsequent launches skip
- * already-applied migrations (they're idempotent — safe to call every time).
+ * ─── WHY STATE-BASED NAVIGATION IS SCAFFOLDING ONLY ─────────────────────────
+ * We're swapping screens by toggling a `screen` state variable. This works
+ * visually but has NONE of the features a real navigation stack provides:
+ *
+ *   1. No animation: screens appear instantly with no transition.
+ *      A real stack animates the new screen sliding in from the right.
+ *
+ *   2. No back button: the Android hardware back button does nothing.
+ *      React Navigation listens to it and pops the stack. We don't.
+ *
+ *   3. No deep linking: there's no URL/route to link to a specific screen.
+ *      React Navigation maps URLs to screens automatically.
+ *
+ *   4. No history: there's no "stack" of screens. Pressing back has
+ *      nowhere to go except the state we set manually.
+ *
+ *   5. No tab bar: navigation tabs are a first-class concept in
+ *      React Navigation (createBottomTabNavigator). We fake them with buttons.
+ *
+ * This pattern (state-based screen switching) is ONLY acceptable during
+ * active development when the navigation library isn't wired up yet.
+ * Never ship it to users. Day 5 replaces this with React Navigation.
  */
 
 import "./global.css"; // ← MUST be the very first import — initialises NativeWind
@@ -37,44 +50,36 @@ import { db, runMigrations } from "./src/db";
 import { colors } from "./src/theme";
 import { CustomerListScreen } from "./src/screens/CustomerListScreen";
 import { TransactionScreen } from "./src/screens/TransactionScreen";
+import { DashboardScreen } from "./src/screens/DashboardScreen";
 import { getAllCustomers } from "./src/repositories/customers";
 import { Customer } from "./src/types";
 
-// ─── Migration State ───────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type MigrationState = "pending" | "running" | "done" | "error";
+
+// The three top-level screens reachable from the tab switcher
+type Screen = "dashboard" | "customers";
 
 // ─── App Component ─────────────────────────────────────────────────────────────
 
 export default function App() {
   const [migrationState, setMigrationState] = useState<MigrationState>("pending");
   const [migrationError, setMigrationError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0); // incrementing this re-triggers the useEffect
+  const [retryCount, setRetryCount] = useState(0);
 
-  // ── DAY 3 TEST SCAFFOLDING ──────────────────────────────────────────────────
-  // Temporarily fetch the first customer so we can render TransactionScreen.
-  // This wiring will be REMOVED on Day 5 when React Navigation is added.
-  // We'll replace it with a proper navigation stack and route params.
-  const [testCustomer, setTestCustomer] = useState<Customer | null>(null);
+  // DAY 4 SCAFFOLDING: active top-level screen tab
+  const [activeScreen, setActiveScreen] = useState<Screen>("dashboard");
+
+  // DAY 3 SCAFFOLDING: navigate to TransactionScreen by selecting a customer
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   // ── Run migrations on mount ───────────────────────────────────────────────
-  // useEffect with [] runs exactly once — when the component first mounts.
-  // We can't make the effect itself async (React restriction), so we define
-  // an inner async function and call it immediately. This is the standard
-  // React pattern for async work in useEffect.
   useEffect(() => {
     async function bootstrap() {
       try {
         setMigrationState("running");
         await runMigrations(db);
-
-        // DAY 3 SCAFFOLDING: fetch first customer to test TransactionScreen.
-        // getAllCustomers returns [] if no customers yet — testCustomer stays null.
-        const customers = await getAllCustomers(db);
-        if (customers.length > 0) {
-          setTestCustomer(customers[0]);
-        }
-
         setMigrationState("done");
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
@@ -85,7 +90,7 @@ export default function App() {
     }
 
     bootstrap();
-  }, [retryCount]); // re-runs when user taps Retry (retryCount increments)
+  }, [retryCount]);
 
   // ── Loading screen ────────────────────────────────────────────────────────
   if (migrationState === "pending" || migrationState === "running") {
@@ -101,9 +106,6 @@ export default function App() {
   }
 
   // ── Error screen ──────────────────────────────────────────────────────────
-  // This is a last-resort screen. In practice, SQLite migrations almost
-  // never fail on device. If they do, the user can't use the app until
-  // the schema issue is resolved — so we show a clear error.
   if (migrationState === "error") {
     return (
       <SafeAreaProvider>
@@ -116,7 +118,6 @@ export default function App() {
           </Text>
           <Pressable
             onPress={() => {
-              // Increment retryCount → useEffect dependency changes → re-runs
               setMigrationState("pending");
               setMigrationError(null);
               setRetryCount((n) => n + 1);
@@ -131,20 +132,56 @@ export default function App() {
   }
 
   // ── Main app ──────────────────────────────────────────────────────────────
-  // DAY 3 SCAFFOLDING:
-  // If a customer exists, show TransactionScreen for testing.
-  // Otherwise fall back to CustomerListScreen (add a customer first!).
-  // On Day 5, replace this entire block with React Navigation stack.
+  // DAY 4 SCAFFOLDING:
+  // If a customer is selected → show their TransactionScreen
+  // Otherwise → show the active tab (Dashboard or Customers)
+  // On Day 5 this entire block is replaced with React Navigation.
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      {testCustomer ? (
+
+      {selectedCustomer ? (
+        // Transaction screen: wired with Day 3 customer-selection logic
         <TransactionScreen
-          customer={testCustomer}
-          onBack={() => setTestCustomer(null)}
+          customer={selectedCustomer}
+          onBack={() => setSelectedCustomer(null)}
         />
       ) : (
-        <CustomerListScreen />
+        <View style={styles.appContainer}>
+          {/* ── Temporary tab switcher ────────────────────────────────── */}
+          {/*
+           * This is scaffold navigation. On Day 5, replace with:
+           *   createBottomTabNavigator from React Navigation.
+           * The tab bar will be real, animated, and handle the back button.
+           */}
+          <View style={styles.tabBar}>
+            <Pressable
+              id="tab-dashboard"
+              style={[styles.tab, activeScreen === "dashboard" && styles.tabActive]}
+              onPress={() => setActiveScreen("dashboard")}
+            >
+              <Text style={[styles.tabText, activeScreen === "dashboard" && styles.tabTextActive]}>
+                📊 Dashboard
+              </Text>
+            </Pressable>
+            <Pressable
+              id="tab-customers"
+              style={[styles.tab, activeScreen === "customers" && styles.tabActive]}
+              onPress={() => setActiveScreen("customers")}
+            >
+              <Text style={[styles.tabText, activeScreen === "customers" && styles.tabTextActive]}>
+                👥 Customers
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* ── Screen content ────────────────────────────────────────── */}
+          {activeScreen === "dashboard" ? (
+            <DashboardScreen />
+          ) : (
+            <CustomerListScreen />
+          )}
+        </View>
       )}
     </SafeAreaProvider>
   );
@@ -189,5 +226,40 @@ const styles = StyleSheet.create({
     color: colors.accent.teal,
     fontWeight: "600",
     fontSize: 15,
+  },
+
+  // ── Main app layout ───────────────────────────────────────────────────────
+  appContainer: {
+    flex: 1,
+    backgroundColor: colors.background.primary,
+  },
+
+  // ── Tab bar scaffolding ───────────────────────────────────────────────────
+  // This mimics a real tab bar but is a simple View with two Pressables.
+  // It sits at the TOP (not bottom) during scaffolding because we don't yet
+  // handle safe area insets for a bottom tab bar correctly.
+  // Day 5 moves this to the bottom with createBottomTabNavigator.
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: colors.background.secondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.background.tertiary,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: colors.accent.teal,
+  },
+  tabText: {
+    color: colors.text.muted,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  tabTextActive: {
+    color: colors.accent.teal,
   },
 });

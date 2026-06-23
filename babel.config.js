@@ -13,8 +13,13 @@
  * That transformation happens at compile time (build time), not at runtime.
  * This is why NativeWind has zero runtime overhead for class name resolution.
  *
- * Plugin order matters: "nativewind/babel" must come BEFORE "react-native-reanimated/plugin"
- * if you ever add Reanimated. For now it just needs to be in the plugins array.
+ * Plugin order matters:
+ *   1. "nativewind/babel"              — className → StyleSheet transformation
+ *   2. "react-native-reanimated/plugin" — MUST be LAST
+ *      Required by victory-native v41 (which uses Reanimated for animations)
+ *      and also by React Native Reanimated itself. Reanimated's babel plugin
+ *      transforms worklet functions so they can run on the native thread.
+ *      If it's not last, it may conflict with other plugins.
  */
 module.exports = function (api) {
   api.cache(true);
@@ -22,6 +27,10 @@ module.exports = function (api) {
     presets: [
       ["babel-preset-expo", { jsxImportSource: "nativewind" }],
     ],
-    plugins: ["nativewind/babel"],
+    plugins: [
+      "nativewind/babel",
+      "react-native-reanimated/plugin", // MUST be last — transforms Reanimated worklets
+    ],
   };
 };
+

@@ -49,9 +49,10 @@
  * @param name - The customer's full name as stored in the database
  * @returns    - 1 or 2 uppercase initials, or "?" if name is empty
  */
-export function getInitials(name: string): string {
+export function getInitials(name: string | null | undefined): string {
+  if (!name) return '';
   const trimmed = name.trim();
-  if (!trimmed) return '?';
+  if (!trimmed) return '';
 
   // Split on any whitespace (handles double spaces, tabs, etc.)
   const words = trimmed.split(/\s+/);
@@ -59,6 +60,5 @@ export function getInitials(name: string): string {
   const first  = words[0]?.[0]?.toUpperCase() ?? '';
   const second = words[1]?.[0]?.toUpperCase() ?? '';
 
-  // If somehow first is empty after trim (shouldn't happen), fall back to "?"
-  return first + second || '?';
+  return first + second;
 }

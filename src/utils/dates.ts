@@ -25,6 +25,8 @@
  * we change one function, not thirty components.
  */
 
+import { DailyTotal } from '../types';
+
 // ─── Helper: zero-pad hours/minutes ──────────────────────────────────────────
 
 /**
@@ -124,6 +126,48 @@ export function formatTransactionDate(isoString: string): string {
   const day = date.getDate();                  // 1–31
   const month = MONTHS[date.getMonth()];       // "Jan"–"Dec"
   return `${day} ${month}, ${time}`;
+}
+/**
+ * Fills gaps in a daily totals array so every day has an entry.
+ *
+ * The SQL query only returns days that have data. If no debt was recorded
+ * on Wednesday, Wednesday is absent from the results. A bar chart needs
+ * exactly `days` data points to render a bar for every day.
+ *
+ * Algorithm:
+ *   1. Build a Map of { "YYYY-MM-DD" → total } from the DB results.
+ *   2. Generate all `days` dates counting back from today.
+ *   3. For each generated date: use the DB value or fall back to 0.
+ *
+ * @param dbResults - Rows returned by the SQL query
+ * @param days      - Total number of days to generate (including today)
+ */
+export function fillMissingDays(
+  dbResults: { date: string; total: number }[],
+  days: number
+): DailyTotal[] {
+  // Step 1: index DB results by date string for O(1) lookup
+  const byDate = new Map<string, number>();
+  for (const row of dbResults) {
+    byDate.set(row.date, row.total);
+  }
+
+  // Step 2: generate all `days` date keys
+  const result: DailyTotal[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+
+    // Format as "YYYY-MM-DD" (same format strftime produces)
+    const yyyy = d.getFullYear();
+    const mm   = String(d.getMonth() + 1).padStart(2, '0');
+    const dd   = String(d.getDate()).padStart(2, '0');
+    const key  = `${yyyy}-${mm}-${dd}`;
+
+    result.push({ date: key, total: byDate.get(key) ?? 0 });
+  }
+
+  return result;
 }
 
 // ─── Inline test (remove after verification) ─────────────────────────────────

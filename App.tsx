@@ -1,36 +1,61 @@
 /**
- * App.tsx — DAY 4 BUILD
+ * App.tsx — DAY 6 BUILD
  *
- * RESPONSIBILITIES (same as Day 2 + Day 3 + Day 4 additions):
+ * RESPONSIBILITIES:
  *   1. Import global.css (MUST be first — initialises NativeWind)
  *   2. Run database migrations on mount
- *   3. Wrap the app in SafeAreaProvider
- *   4. Show loading / error states during migrations
- *   5. Render a temporary screen switcher (Dashboard | Customers)
- *   6. Keep the Day 3 customer→TransactionScreen wiring
+ *   3. Check AsyncStorage for first-launch flag
+ *   4. Auto-seed demo data on first launch
+ *   5. Wrap the app in SafeAreaProvider + NavigationContainer
+ *   6. Render RootTabs (the real React Navigation bottom tab navigator)
  *
- * ─── WHY STATE-BASED NAVIGATION IS SCAFFOLDING ONLY ─────────────────────────
- * We're swapping screens by toggling a `screen` state variable. This works
- * visually but has NONE of the features a real navigation stack provides:
+ * ─── THE NAVIGATION CONTAINER ─────────────────────────────────────────────────
  *
- *   1. No animation: screens appear instantly with no transition.
- *      A real stack animates the new screen sliding in from the right.
+ * NavigationContainer is the root component that React Navigation REQUIRES.
+ * It:
+ *   1. Holds the navigation state (which tab is active, which screens are
+ *      on the stack) in memory.
+ *   2. Integrates with the Android back button — when the user presses back,
+ *      NavigationContainer knows whether to pop the stack or let the OS handle it.
+ *   3. Enables deep linking — URL schemes can navigate to specific screens.
+ *   4. Provides the navigation context that ALL child hooks (useNavigation,
+ *      useRoute) rely on. Without this wrapper, those hooks throw an error.
  *
- *   2. No back button: the Android hardware back button does nothing.
- *      React Navigation listens to it and pops the stack. We don't.
+ * RULE: NavigationContainer must be rendered exactly ONCE, at the root.
+ * Nesting multiple NavigationContainers causes subtle, hard-to-debug errors.
  *
- *   3. No deep linking: there's no URL/route to link to a specific screen.
- *      React Navigation maps URLs to screens automatically.
+ * ─── FIRST LAUNCH SEEDING ─────────────────────────────────────────────────────
  *
- *   4. No history: there's no "stack" of screens. Pressing back has
- *      nowhere to go except the state we set manually.
+ * When the shopkeeper installs Duka Deni for the first time, the SQLite
+ * database is completely empty. An empty dashboard looks broken — no data,
+ * no "wow" moment.
  *
- *   5. No tab bar: navigation tabs are a first-class concept in
- *      React Navigation (createBottomTabNavigator). We fake them with buttons.
+ * We detect first launch using AsyncStorage:
  *
- * This pattern (state-based screen switching) is ONLY acceptable during
- * active development when the navigation library isn't wired up yet.
- * Never ship it to users. Day 5 replaces this with React Navigation.
+ *   const hasLaunched = await AsyncStorage.getItem('hasLaunched')
+ *
+ * AsyncStorage is a simple key-value store (like localStorage in a browser).
+ * It persists across app restarts. It is NOT a database — no queries, no
+ * relations. Just strings, indexed by key.
+ *
+ * WHY ASYNCSTORAGE INSTEAD OF SQLITE FOR THIS FLAG?
+ *   We need to check "has this app been opened before" BEFORE displaying any
+ *   UI. AsyncStorage is designed for exactly this — reading small flags
+ *   quickly at startup. SQLite would require opening a database connection,
+ *   running a query, and parsing a result row. Overkill for a boolean.
+ *
+ * The first-launch pattern is universal in production apps:
+ *   - Onboarding screens ("Welcome to…")
+ *   - Default settings initialization
+ *   - "Rate the app" prompt (shown after N launches)
+ *   - Tutorial overlays (shown once, never again)
+ *
+ * WHAT HAPPENS:
+ *   First open  → hasLaunched is null → seed demo data → set 'hasLaunched'
+ *   Every other open → hasLaunched is 'true' → skip seeding → show real data
+ *
+ * The shopkeeper can reset to demo data anytime via Settings → Load Demo Data.
+ * This does NOT reset the 'hasLaunched' flag — the auto-seed only happens once.
  */
 
 import "./global.css"; // ← MUST be the very first import — initialises NativeWind
@@ -44,56 +69,79 @@ import {
   Pressable,
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { db, runMigrations } from "./src/db";
+import { seedDemoData } from "./src/db/seed";
+import { RootTabs } from "./src/navigation";
 import { colors } from "./src/theme";
-import { CustomerListScreen } from "./src/screens/CustomerListScreen";
-import { TransactionScreen } from "./src/screens/TransactionScreen";
-import { DashboardScreen } from "./src/screens/DashboardScreen";
-import { getAllCustomers } from "./src/repositories/customers";
-import { Customer } from "./src/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type MigrationState = "pending" | "running" | "done" | "error";
+type BootState = "pending" | "running" | "done" | "error";
 
-// The three top-level screens reachable from the tab switcher
-type Screen = "dashboard" | "customers";
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-// ─── App Component ─────────────────────────────────────────────────────────────
+/** AsyncStorage key for the first-launch flag */
+const FIRST_LAUNCH_KEY = "hasLaunched_v1";
+//                                       ^^^ Include a version suffix.
+//                                       If you ever need to re-run first-launch
+//                                       logic (e.g. for a major update), bump
+//                                       this to 'hasLaunched_v2' — the old key
+//                                       is ignored automatically.
+
+// ─── App Component ────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [migrationState, setMigrationState] = useState<MigrationState>("pending");
-  const [migrationError, setMigrationError] = useState<string | null>(null);
+  const [bootState, setBootState] = useState<BootState>("pending");
+  const [bootError, setBootError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
-  // DAY 4 SCAFFOLDING: active top-level screen tab
-  const [activeScreen, setActiveScreen] = useState<Screen>("dashboard");
-
-  // DAY 3 SCAFFOLDING: navigate to TransactionScreen by selecting a customer
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-
-  // ── Run migrations on mount ───────────────────────────────────────────────
+  // ── Bootstrap: migrations + first-launch seed ────────────────────────────────
   useEffect(() => {
     async function bootstrap() {
       try {
-        setMigrationState("running");
+        setBootState("running");
+
+        // Step 1: Run database migrations.
+        // This creates the customers and transactions tables if they don't
+        // exist yet. Safe to run every launch — uses CREATE TABLE IF NOT EXISTS.
         await runMigrations(db);
-        setMigrationState("done");
+
+        // Step 2: Check if this is the very first launch.
+        //
+        // AsyncStorage.getItem returns null if the key has never been set.
+        // We use this to detect: has the app ever been opened before?
+        const hasLaunched = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
+
+        if (!hasLaunched) {
+          // First time ever. Seed demo data so the dashboard is populated.
+          console.log("[App] First launch detected — seeding demo data");
+          await seedDemoData(db);
+
+          // Mark this launch so we never auto-seed again.
+          await AsyncStorage.setItem(FIRST_LAUNCH_KEY, "true");
+          console.log("[App] First launch flag set");
+        } else {
+          console.log("[App] Returning user — skipping seed");
+        }
+
+        setBootState("done");
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        console.error("[App] Migration failed:", msg);
-        setMigrationError(msg);
-        setMigrationState("error");
+        console.error("[App] Bootstrap failed:", msg);
+        setBootError(msg);
+        setBootState("error");
       }
     }
 
     bootstrap();
   }, [retryCount]);
 
-  // ── Loading screen ────────────────────────────────────────────────────────
-  if (migrationState === "pending" || migrationState === "running") {
+  // ── Loading screen ───────────────────────────────────────────────────────────
+  if (bootState === "pending" || bootState === "running") {
     return (
       <SafeAreaProvider>
         <View style={styles.centeredScreen}>
@@ -105,21 +153,21 @@ export default function App() {
     );
   }
 
-  // ── Error screen ──────────────────────────────────────────────────────────
-  if (migrationState === "error") {
+  // ── Error screen ─────────────────────────────────────────────────────────────
+  if (bootState === "error") {
     return (
       <SafeAreaProvider>
         <View style={styles.centeredScreen}>
           <StatusBar style="light" />
-          <Text style={styles.errorTitle}>⚠️ Database Error</Text>
+          <Text style={styles.errorTitle}>⚠️ Startup Error</Text>
           <Text style={styles.errorMessage}>
             The app failed to start. Please restart.{"\n"}
-            {migrationError}
+            {bootError}
           </Text>
           <Pressable
             onPress={() => {
-              setMigrationState("pending");
-              setMigrationError(null);
+              setBootState("pending");
+              setBootError(null);
               setRetryCount((n) => n + 1);
             }}
             style={styles.retryButton}
@@ -131,58 +179,21 @@ export default function App() {
     );
   }
 
-  // ── Main app ──────────────────────────────────────────────────────────────
-  // DAY 4 SCAFFOLDING:
-  // If a customer is selected → show their TransactionScreen
-  // Otherwise → show the active tab (Dashboard or Customers)
-  // On Day 5 this entire block is replaced with React Navigation.
+  // ── Main app — React Navigation wired up ────────────────────────────────────
+  //
+  // NavigationContainer is the REQUIRED root wrapper for React Navigation.
+  // Everything that uses useNavigation() or useRoute() must be a descendant
+  // of this component. Rendering it here (at the top level, after migrations
+  // are confirmed complete) ensures the DB is ready before any screen mounts.
+  //
+  // RootTabs renders the bottom tab navigator with 3 tabs:
+  //   📊 Dashboard | 👥 Customers | ⚙️ Settings
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-
-      {selectedCustomer ? (
-        // Transaction screen: wired with Day 3 customer-selection logic
-        <TransactionScreen
-          customer={selectedCustomer}
-          onBack={() => setSelectedCustomer(null)}
-        />
-      ) : (
-        <View style={styles.appContainer}>
-          {/* ── Temporary tab switcher ────────────────────────────────── */}
-          {/*
-           * This is scaffold navigation. On Day 5, replace with:
-           *   createBottomTabNavigator from React Navigation.
-           * The tab bar will be real, animated, and handle the back button.
-           */}
-          <View style={styles.tabBar}>
-            <Pressable
-              id="tab-dashboard"
-              style={[styles.tab, activeScreen === "dashboard" && styles.tabActive]}
-              onPress={() => setActiveScreen("dashboard")}
-            >
-              <Text style={[styles.tabText, activeScreen === "dashboard" && styles.tabTextActive]}>
-                📊 Dashboard
-              </Text>
-            </Pressable>
-            <Pressable
-              id="tab-customers"
-              style={[styles.tab, activeScreen === "customers" && styles.tabActive]}
-              onPress={() => setActiveScreen("customers")}
-            >
-              <Text style={[styles.tabText, activeScreen === "customers" && styles.tabTextActive]}>
-                👥 Customers
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* ── Screen content ────────────────────────────────────────── */}
-          {activeScreen === "dashboard" ? (
-            <DashboardScreen />
-          ) : (
-            <CustomerListScreen />
-          )}
-        </View>
-      )}
+      <NavigationContainer>
+        <RootTabs />
+      </NavigationContainer>
     </SafeAreaProvider>
   );
 }
@@ -226,40 +237,5 @@ const styles = StyleSheet.create({
     color: colors.accent.teal,
     fontWeight: "600",
     fontSize: 15,
-  },
-
-  // ── Main app layout ───────────────────────────────────────────────────────
-  appContainer: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-
-  // ── Tab bar scaffolding ───────────────────────────────────────────────────
-  // This mimics a real tab bar but is a simple View with two Pressables.
-  // It sits at the TOP (not bottom) during scaffolding because we don't yet
-  // handle safe area insets for a bottom tab bar correctly.
-  // Day 5 moves this to the bottom with createBottomTabNavigator.
-  tabBar: {
-    flexDirection: "row",
-    backgroundColor: colors.background.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.background.tertiary,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  tabActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: colors.accent.teal,
-  },
-  tabText: {
-    color: colors.text.muted,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  tabTextActive: {
-    color: colors.accent.teal,
   },
 });

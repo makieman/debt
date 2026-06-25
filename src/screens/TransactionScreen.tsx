@@ -1,5 +1,5 @@
 /**
- * src/screens/TransactionScreen.tsx
+ * src/screens/TransactionScreen.tsx — Day 5 update
  *
  * The per-customer transaction history and action screen.
  *
@@ -9,7 +9,52 @@
  *   2. Make both primary actions (debt / payment) immediately visible
  *   3. Show a trustworthy history list (newest first)
  *
- * DESIGN DECISIONS:
+ * ─── DAY 5 CHANGES ───────────────────────────────────────────────────────────
+ *
+ * Old (Day 3 scaffolding):
+ *   - Received `customer` and `onBack` as direct props
+ *   - Rendered by App.tsx which held the customer in state
+ *
+ * New (Day 5 — React Navigation):
+ *   - `customer` is read from route.params via useRoute()
+ *   - Back button uses navigation.goBack() via useNavigation()
+ *   - No props at all — navigators render screens with no props
+ *
+ * ─── WHY SCREENS IN A NAVIGATOR RECEIVE NO PROPS ─────────────────────────────
+ *
+ * React Navigation renders our screen components internally:
+ *   <Stack.Screen name="Transaction" component={TransactionScreen} />
+ * It calls TransactionScreen() with NO extra props (other than the built-in
+ * `navigation` and `route` props React Navigation injects automatically).
+ * We cannot pass custom props from a parent component because no parent
+ * component renders TransactionScreen — the navigator does.
+ *
+ * The correct data channel between screens is route.params:
+ *   navigation.navigate('Transaction', { customer })  ← sender
+ *   const { customer } = useRoute().params            ← receiver
+ *
+ * ─── goBack() vs navigate() FOR A BACK BUTTON ────────────────────────────────
+ *
+ * WRONG: navigation.navigate('CustomerList', {})
+ *   This pushes a NEW CustomerList screen onto the stack every time.
+ *   After 5 taps of "back", the stack has 5 CustomerList screens.
+ *   The user would need to tap "back" 5 more times to exit the stack.
+ *   This is a very common React Navigation beginner bug.
+ *
+ * CORRECT: navigation.goBack()
+ *   This POPS the current screen (TransactionScreen) off the stack.
+ *   The screen that was below it (CustomerListScreen) becomes visible.
+ *   Stack shrinks by 1. Correct behavior.
+ *
+ * ─── ANDROID HARDWARE BACK BUTTON ───────────────────────────────────────────
+ *
+ * React Navigation automatically listens to the Android hardware back button.
+ * When pressed, it calls goBack() on the active navigator.
+ * Our custom back arrow does exactly the same thing — it just provides a
+ * visual button that matches our dark theme. Both routes lead to the same
+ * goBack() call, so they're equivalent.
+ *
+ * ─── DESIGN DECISIONS (unchanged from Day 3) ─────────────────────────────────
  *
  * TWO SEPARATE MODAL STATE BOOLEANS (showDebtModal / showPaymentModal):
  * We could use one variable: `activeModal: 'debt' | 'payment' | null`
@@ -29,9 +74,6 @@
  * in green (colors.payment) instead of a confusing "−KES X". The shopkeeper
  * understands: the customer has credit for their next purchase. We never crash
  * on negative balances — Math.abs() gives us a positive display value.
- *
- * PROPS (Day 5 will replace with React Navigation route params):
- * For now, the customer is passed as a direct prop for test rendering in App.tsx.
  */
 
 import React, { useState, useCallback } from 'react';
@@ -43,27 +85,38 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  SafeAreaView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Customer, Transaction } from '../types';
+import { useNavigation } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { Transaction } from '../types';
 import { colors } from '../theme';
 import { formatKES } from '../utils/money';
 import { useTransactions } from '../hooks/useTransactions';
 import { TransactionRow } from '../components/TransactionRow';
 import { AddTransactionModal } from '../components/AddTransactionModal';
-
-// ─── Props ────────────────────────────────────────────────────────────────────
-
-interface TransactionScreenProps {
-  customer: Customer;
-  onBack?: () => void;  // optional — wired up properly on Day 5
-}
+import { TransactionRouteProp, TransactionNavProp } from '../navigation/types';
 
 // ─── Component ────────────────────────────────────────────────────────────────
+//
+// No props interface — screens rendered by a navigator receive no custom props.
+// All data comes from route.params (the customer object) and navigation context.
 
-export function TransactionScreen({ customer, onBack }: TransactionScreenProps) {
+export function TransactionScreen() {
   const insets = useSafeAreaInsets();  // respect notch / home indicator
+
+  // ── Navigation hooks ───────────────────────────────────────────────────────
+  //
+  // useRoute() reads the params that were passed when this screen was pushed:
+  //   navigation.navigate('Transaction', { customer })
+  // The generic <TransactionRouteProp> types route.params.customer as Customer.
+  //
+  // useNavigation() gives us goBack() to pop this screen off the stack.
+  // The typed generic ensures setOptions() and other calls are also typed.
+  const route = useRoute<TransactionRouteProp>();
+  const navigation = useNavigation<TransactionNavProp>();
+  const { customer } = route.params;
 
   // Data from hook — both transactions and balance fetched together
   const { transactions, balance, loading, error, refresh } = useTransactions(customer.id);
@@ -184,13 +237,21 @@ export function TransactionScreen({ customer, onBack }: TransactionScreenProps) 
 
       {/* ── Screen header ── */}
       <View style={styles.header}>
+        {/*
+         * Back button — calls navigation.goBack() to POP TransactionScreen.
+         * DO NOT use navigation.navigate() here — that would PUSH a new screen
+         * instead of popping the current one, causing the stack to grow forever.
+         *
+         * The Android hardware back button also calls goBack() automatically
+         * via React Navigation's BackHandler integration.
+         */}
         <Pressable
-          onPress={onBack}
+          onPress={() => navigation.goBack()}
           style={styles.backButton}
           accessibilityLabel="Go back"
           accessibilityRole="button"
         >
-          <Text style={styles.backArrow}>←</Text>
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </Pressable>
 
         <View style={styles.headerCenter}>
@@ -285,10 +346,6 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backArrow: {
-    fontSize: 24,
-    color: colors.text.primary,
   },
   headerCenter: {
     flex: 1,

@@ -1,5 +1,5 @@
 /**
- * src/screens/CustomerListScreen.tsx
+ * src/screens/CustomerListScreen.tsx — Day 5 update
  *
  * The main screen of Duka Deni — the first thing a shopkeeper sees.
  *
@@ -45,11 +45,14 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 import { colors } from "../theme";
 import { useCustomers } from "../hooks/useCustomers";
 import { CustomerCard } from "../components/CustomerCard";
 import { EmptyState } from "../components/EmptyState";
 import { AddCustomerModal } from "../components/AddCustomerModal";
+import { CustomerListNavProp } from "../navigation/types";
+import { CustomerWithBalance } from "../types";
 
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -59,6 +62,16 @@ export function CustomerListScreen() {
   // customers is now CustomerWithBalance[] — balance is included in each item
   // (N+1 fix: was 1 query per customer for balance, now 1 total query)
   const insets = useSafeAreaInsets(); // respect notch / home bar safe area
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+  // useNavigation() reads the nearest navigator from React context.
+  // The typed generic <CustomerListNavProp> gives us:
+  //   - navigation.navigate('Transaction', { customer }) — typed correctly
+  //   - TypeScript error if screen name is misspelled
+  //   - TypeScript error if params don't match the ParamList
+  // No prop drilling: CustomerListScreen calls this directly — no need to
+  // thread a `navigation` prop through CustomerCard or any intermediate component.
+  const navigation = useNavigation<CustomerListNavProp>();
 
   // ── State ─────────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
@@ -88,11 +101,13 @@ export function CustomerListScreen() {
     refresh(); // re-fetch customer list after adding a new one
   }, [refresh]);
 
-  const handleCardPress = useCallback((id: number, name: string) => {
-    // Navigation to transaction screen comes on Day 5.
-    // For now, log so we can confirm Pressable works.
-    console.log("Pressed:", name);
-  }, []);
+  // navigate() pushes TransactionScreen onto the stack with the customer object.
+  // The stack slide-in animation runs automatically — no animation code needed.
+  // navigation.navigate() is the correct call here (not push()) because navigate()
+  // checks if TransactionScreen is already at the top and avoids duplicating it.
+  const handleCardPress = useCallback((customer: CustomerWithBalance) => {
+    navigation.navigate('Transaction', { customer });
+  }, [navigation]);
 
   // ── Render: loading state ─────────────────────────────────────────────────
   // We show this only on the very first load (when customers is empty AND loading)
@@ -193,7 +208,7 @@ export function CustomerListScreen() {
           <CustomerCard
             customer={item}
             balance={item.balance}  // balance now comes from the JOIN query
-            onPress={() => handleCardPress(item.id, item.name)}
+            onPress={() => handleCardPress(item)}
           />
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}

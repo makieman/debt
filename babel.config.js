@@ -27,9 +27,9 @@ module.exports = function (api) {
   return {
     presets: [
       ["babel-preset-expo", { jsxImportSource: "nativewind" }],
-    ],
-    plugins: isTest ? [] : [
       "nativewind/babel",
+    ],
+    plugins: [
       "react-native-reanimated/plugin", // MUST be last — transforms Reanimated worklets
     ],
   };

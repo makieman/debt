@@ -3,17 +3,7 @@
  *
  * Demo data seeding functions.
  *
- * ─── WHY THIS FILE EXISTS ─────────────────────────────────────────────────────
- *
- * On Day 7 a shopkeeper sees this app for the first time. An empty dashboard
- * tells them nothing — there is no "wow" moment. Realistic demo data makes the
- * app feel alive and purpose-built for Kenyan shops.
- *
- * These functions are NEVER called automatically in production mode. They are
- * only called:
- *   1. On first launch (via App.tsx + AsyncStorage first-launch check)
- *   2. When the user taps "Load Demo Data" in the Settings screen
- *
+ 
  * ─── DELETE FROM vs DROP TABLE ───────────────────────────────────────────────
  *
  * clearAllData uses DELETE FROM, NOT DROP TABLE.
@@ -108,19 +98,8 @@ export async function clearAllData(db: SQLiteDatabase): Promise<void> {
 // ─── seedDemoData ─────────────────────────────────────────────────────────────
 
 /**
- * Clears the database and inserts 8 realistic Kenyan shop customers with
- * transaction history spread across the last 14 days.
- *
- * WHY SWAHILI NOTES:
- * "Unga", "Sukari", "Mafuta", "Mkate" are real shop items sold in Kenyan dukas.
- * When the shopkeeper sees these in the demo, the app feels purpose-built for
- * them — not translated from somewhere else. Localised demo data = trust.
- *
- * WHY FATUMA HASSAN HAS ZERO BALANCE:
- * Settled customers are an important part of the lifecycle. The shopkeeper will
- * ask "what happens when someone pays in full?" Fatuma IS the answer — on screen,
- * before they even finish the question.
- *
+
+
  * @param db - The open SQLite database instance
  */
 export async function seedDemoData(db: SQLiteDatabase): Promise<void> {

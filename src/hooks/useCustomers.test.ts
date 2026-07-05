@@ -45,13 +45,14 @@
 
 import { renderHook, act } from '@testing-library/react-native';
 import { useCustomers } from './useCustomers';
-import { getAllCustomersWithBalances } from '../repositories/transactions';
+import { getAllCustomersWithBalances, getDashboardTotals } from '../repositories/transactions';
 
 // Mock the entire transactions repository module
 jest.mock('../repositories/transactions');
 
-// Cast the repository function to a Jest Mock type for TypeScript compile safety
+// Cast the repository functions to Jest Mock types for TypeScript compile safety
 const mockGetAllCustomersWithBalances = getAllCustomersWithBalances as jest.Mock;
+const mockGetDashboardTotals = getDashboardTotals as jest.Mock;
 
 describe('useCustomers Hook', () => {
   const dummyCustomers = [
@@ -62,6 +63,13 @@ describe('useCustomers Hook', () => {
   beforeEach(() => {
     // Clear mock records between tests to prevent call counts bleeding into other tests
     jest.clearAllMocks();
+
+    // Default mock implementation for getDashboardTotals so it doesn't return undefined
+    mockGetDashboardTotals.mockResolvedValue({
+      totalOutstanding: 15000,
+      totalCollected: 5000,
+      totalReceivables: 20000,
+    });
   });
 
   it('should return initial loading state and then populate customers on success', async () => {

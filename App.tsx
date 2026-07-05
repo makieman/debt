@@ -145,7 +145,7 @@ export default function App() {
     return (
       <SafeAreaProvider>
         <View style={styles.centeredScreen}>
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
           <ActivityIndicator size="large" color={colors.accent.teal} />
           <Text style={styles.loadingLabel}>Starting Duka Deni...</Text>
         </View>
@@ -158,7 +158,7 @@ export default function App() {
     return (
       <SafeAreaProvider>
         <View style={styles.centeredScreen}>
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
           <Text style={styles.errorTitle}>⚠️ Startup Error</Text>
           <Text style={styles.errorMessage}>
             The app failed to start. Please restart.{"\n"}
@@ -190,7 +190,7 @@ export default function App() {
   //   📊 Dashboard | 👥 Customers | ⚙️ Settings
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <NavigationContainer>
         <RootTabs />
       </NavigationContainer>

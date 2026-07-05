@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
 
   // Balance card
   balanceCard: {
-    backgroundColor: colors.background.secondary,
+    backgroundColor: colors.background.primary,
     borderRadius: 16,
     paddingVertical: 24,
     paddingHorizontal: 20,
@@ -413,6 +413,11 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1,
     borderColor: colors.background.tertiary,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
   },
   balanceLabel: {
     fontSize: 13,

@@ -36,13 +36,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { CustomerWithBalance } from '../types';
-import { getAllCustomersWithBalances } from '../repositories/transactions';
+import { getAllCustomersWithBalances, getDashboardTotals } from '../repositories/transactions';
 import { db } from '../db';
 
 // ─── Return Type ────────────────────────────────────────────────────────────
 
 interface UseCustomersResult {
   customers: CustomerWithBalance[];
+  totalOwed: number;
+  totalPaid: number;
   loading: boolean;
   error: Error | null;
   refresh: () => void;
@@ -52,6 +54,8 @@ interface UseCustomersResult {
 
 export function useCustomers(): UseCustomersResult {
   const [customers, setCustomers] = useState<CustomerWithBalance[]>([]);
+  const [totalOwed, setTotalOwed] = useState(0);
+  const [totalPaid, setTotalPaid] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -65,10 +69,14 @@ export function useCustomers(): UseCustomersResult {
     try {
       setLoading(true);
       setError(null); // clear any previous error before retrying
-      // DAY 4: getAllCustomersWithBalances replaces getAllCustomers + N balance queries.
-      // One SQL JOIN query returns customers + their balances together.
-      const rows = await getAllCustomersWithBalances(db);
+      // Fetch customers and dashboard totals in parallel for maximum efficiency
+      const [rows, totals] = await Promise.all([
+        getAllCustomersWithBalances(db),
+        getDashboardTotals(db),
+      ]);
       setCustomers(rows);
+      setTotalOwed(totals.totalOutstanding);
+      setTotalPaid(totals.totalCollected);
     } catch (err) {
       // Always store Error objects, never raw unknowns
       setError(err instanceof Error ? err : new Error(String(err)));
@@ -77,7 +85,7 @@ export function useCustomers(): UseCustomersResult {
       // This guarantees loading goes false even if there's an error.
       setLoading(false);
     }
-  }, []); // [] because getAllCustomersWithBalances and db are module-level constants
+  }, []); // [] because getAllCustomersWithBalances, getDashboardTotals and db are module-level constants
 
   // ── Effect: fetch on mount ──────────────────────────────────────────────────
   // This runs once when the hook is first used by a component.
@@ -92,6 +100,8 @@ export function useCustomers(): UseCustomersResult {
   // don't need to know our internal function name.
   return {
     customers,
+    totalOwed,
+    totalPaid,
     loading,
     error,
     refresh: fetchCustomers,

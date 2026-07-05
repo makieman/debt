@@ -166,6 +166,32 @@ export async function getTotalOutstanding(db: SQLiteDatabase): Promise<number> {
   return row?.outstanding ?? 0;
 }
 
+export interface DashboardTotals {
+  totalReceivables: number;
+  totalCollected: number;
+  totalOutstanding: number;
+}
+
+/**
+ * Returns total receivables (debts), total collected (payments), and total outstanding in cents.
+ */
+export async function getDashboardTotals(db: SQLiteDatabase): Promise<DashboardTotals> {
+  const row = await db.getFirstAsync<{ receivables: number | null; collected: number | null }>(
+    `SELECT
+       SUM(CASE WHEN type = 'debt'    THEN amount ELSE 0 END) AS receivables,
+       SUM(CASE WHEN type = 'payment' THEN amount ELSE 0 END) AS collected
+     FROM transactions`
+  );
+  const totalReceivables = row?.receivables ?? 0;
+  const totalCollected = row?.collected ?? 0;
+  const totalOutstanding = totalReceivables - totalCollected;
+  return {
+    totalReceivables,
+    totalCollected,
+    totalOutstanding,
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**

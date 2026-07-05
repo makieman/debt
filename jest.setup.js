@@ -25,3 +25,13 @@ jest.mock('react-native-reanimated', () => {
 
 // Silence reanimated worklet warnings
 global.__reanimatedWorkletInit = () => {};
+
+// Mock @expo/vector-icons
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  return {
+    Ionicons: (props) => <Text {...props}>{props.name}</Text>,
+    Feather: (props) => <Text {...props}>{props.name}</Text>,
+  };
+});

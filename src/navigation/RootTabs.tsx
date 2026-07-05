@@ -63,16 +63,16 @@ export default function RootTabs() {
         // Hide the top header — our screens manage their own headers
         headerShown: false,
 
-        // ── Tab bar dark theme ────────────────────────────────────────────
+        // ── Tab bar light theme ────────────────────────────────────────────
         tabBarStyle: {
-          backgroundColor: colors.background.secondary,
+          backgroundColor: colors.background.primary,
           borderTopColor: colors.background.tertiary,
           borderTopWidth: 1,
           height: 60,
           paddingBottom: 8,
         },
 
-        // Active tab (selected): teal accent
+        // Active tab (selected): emerald green accent
         tabBarActiveTintColor: colors.accent.teal,
 
         // Inactive tabs (not selected): muted gray

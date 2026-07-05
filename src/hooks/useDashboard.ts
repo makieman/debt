@@ -53,7 +53,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../db';
 import {
-  getTotalOutstanding,
+  getDashboardTotals,
   getTopDebtors,
   getRecentActivity,
   getCustomerCount,
@@ -65,6 +65,8 @@ import { TopDebtor, ActivityItem, DailyTotal } from '../types';
 
 export interface UseDashboardResult {
   totalOutstanding: number;   // cents
+  totalReceivables: number;   // cents
+  totalCollected: number;     // cents
   topDebtors: TopDebtor[];
   recentActivity: ActivityItem[];
   customerCount: number;
@@ -78,6 +80,8 @@ export interface UseDashboardResult {
 
 export function useDashboard(): UseDashboardResult {
   const [totalOutstanding, setTotalOutstanding] = useState<number>(0);
+  const [totalReceivables, setTotalReceivables] = useState<number>(0);
+  const [totalCollected, setTotalCollected] = useState<number>(0);
   const [topDebtors, setTopDebtors] = useState<TopDebtor[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [customerCount, setCustomerCount] = useState<number>(0);
@@ -95,15 +99,17 @@ export function useDashboard(): UseDashboardResult {
 
       // All 5 queries fire at the same time — Promise.all collects results
       // when the LAST one resolves. If any rejects, the catch fires.
-      const [outstanding, debtors, activity, count, daily] = await Promise.all([
-        getTotalOutstanding(db),        // query 1: SUM across all transactions
+      const [totals, debtors, activity, count, daily] = await Promise.all([
+        getDashboardTotals(db),         // query 1: SUM receivables and payments
         getTopDebtors(db, 5),           // query 2: JOIN + GROUP BY + HAVING
         getRecentActivity(db, 10),      // query 3: JOIN + ORDER BY + LIMIT
         getCustomerCount(db),           // query 4: COUNT(*)
         getDailyTotals(db, 7),          // query 5: strftime + GROUP BY
       ]);
 
-      setTotalOutstanding(outstanding);
+      setTotalReceivables(totals.totalReceivables);
+      setTotalCollected(totals.totalCollected);
+      setTotalOutstanding(totals.totalOutstanding);
       setTopDebtors(debtors);
       setRecentActivity(activity);
       setCustomerCount(count);
@@ -127,6 +133,8 @@ export function useDashboard(): UseDashboardResult {
 
   return {
     totalOutstanding,
+    totalReceivables,
+    totalCollected,
     topDebtors,
     recentActivity,
     customerCount,

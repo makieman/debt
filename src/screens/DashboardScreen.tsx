@@ -1,67 +1,16 @@
 /**
  * src/screens/DashboardScreen.tsx
  *
- * The business health overview screen — answers three questions at a glance:
- *   1. How much money is owed to me in total?
- *   2. Who owes me the most?
- *   3. What happened today (and this week)?
+ * The redesigned home/dashboard screen — answers business overview questions:
+ *   1. How much money is owed in total (receivables)?
+ *   2. Amount collected vs outstanding?
+ *   3. Quick actions: Add Credit, Record Payment, Add Customer.
+ *   4. Recent transactions.
  *
- * ─── ScrollView vs FlatList ────────────────────────────────────────────────────
- * CustomerListScreen uses FlatList because it shows ONE type of item (CustomerCard)
- * repeating N times. FlatList virtualises the list — only visible items are in
- * memory. Perfect for uniform, potentially long lists.
- *
- * DashboardScreen uses ScrollView because it shows HETEROGENEOUS sections:
- *   - Header (unique)
- *   - Stat cards (horizontal scroll within vertical scroll)
- *   - Section header + chart (unique)
- *   - Section header + top 5 debtors (small fixed list)
- *   - Section header + last 10 activity items (small fixed list)
- *
- * There's no single item type to virtualise. The content is a mix of
- * components, each with different heights. ScrollView renders everything
- * at once — which is fine because we have a bounded number of items
- * (5 debtors + 10 activity rows = 15 items max, not 10,000).
- *
- * Rule: use FlatList when the list is UNIFORM and could be LONG.
- *       Use ScrollView when the content is HETEROGENEOUS and BOUNDED.
- *
- * ─── RefreshControl ────────────────────────────────────────────────────────────
- * FlatList has `refreshing` and `onRefresh` props built in.
- * ScrollView doesn't — you add a <RefreshControl> component to its
- * `refreshControl` prop:
- *
- *   <ScrollView
- *     refreshControl={
- *       <RefreshControl
- *         refreshing={loading}
- *         onRefresh={refresh}
- *       />
- *     }
- *   >
- *
- * RefreshControl renders the native platform pull-to-refresh spinner.
- * You don't draw it yourself — iOS shows its native circular spinner,
- * Android shows its Material Design swipe-refresh indicator.
- *
- * ─── "Habari 👋" — Why localisation details matter ───────────────────────────
- * "Habari" is the standard Swahili greeting in Kenya (literally "How are you?"
- * used as "Hello"). Small touches like this make the difference between
- * a generic app and one that feels built FOR the user. A shopkeeper in
- * Nairobi seeing "Habari" feels recognised — this isn't a repackaged
- * Western app, it was made for them. That emotional response is why
- * products like M-Pesa dominate Kenya despite technically inferior specs.
- * Even one localized word signals cultural understanding.
- *
- * ─── Common mistake ────────────────────────────────────────────────────────────
- * Forgetting `contentContainerStyle` vs `style` on ScrollView.
- * `style` styles the ScrollView container (the outer View).
- * `contentContainerStyle` styles the inner content box.
- * Padding must go in `contentContainerStyle` — putting it in `style` would
- * clip the scrollable content against the outer container's edges.
+ * Implements a clean, premium light-mode interface following user guidelines.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -72,64 +21,36 @@ import {
   StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+
 import { useDashboard } from '../hooks/useDashboard';
 import { colors } from '../theme';
 import { formatKES } from '../utils/money';
-import { StatCard } from '../components/StatCard';
-import { TopDebtorRow } from '../components/TopDebtorRow';
 import { ActivityFeedRow } from '../components/ActivityFeedRow';
-import { WeeklyChart } from '../components/WeeklyChart';
+import { AddCustomerModal } from '../components/AddCustomerModal';
+import { RootTabParamList } from '../navigation/types';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-// Day abbreviations for the header date
-const DAYS_SHORT  = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/** Formats today's date as "Tue, 24 Jun" */
-function formatHeaderDate(): string {
-  const now = new Date();
-  const day  = DAYS_SHORT[now.getDay()];
-  const date = now.getDate();
-  const mon  = MONTHS_SHORT[now.getMonth()];
-  return `${day}, ${date} ${mon}`;
-}
-
-/** Formats today's YYYY-MM-DD key to look up in dailyTotals */
-function todayKey(): string {
-  const now  = new Date();
-  const yyyy = now.getFullYear();
-  const mm   = String(now.getMonth() + 1).padStart(2, '0');
-  const dd   = String(now.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
+type DashboardNavProp = BottomTabNavigationProp<RootTabParamList, 'Dashboard'>;
 
 export function DashboardScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<DashboardNavProp>();
   const {
     totalOutstanding,
-    topDebtors,
-    recentActivity,
+    totalReceivables,
+    totalCollected,
     customerCount,
-    dailyTotals,
+    recentActivity,
     loading,
     error,
     refresh,
   } = useDashboard();
 
-  // ── Derived values ─────────────────────────────────────────────────────────
-  // These are computed from data in JS — not requiring extra SQL queries.
-
-  // Count of customers who actually have a balance > 0
-  const activeDebtorCount = topDebtors.length;
-
-  // Today's total debt from the daily totals array
-  const key = todayKey();
-  const todayEntry = dailyTotals.find((d) => d.date === key);
-  const todayTotal = todayEntry?.total ?? 0;
+  // ── States ─────────────────────────────────────────────────────────────────
+  const [modalVisible, setModalVisible] = useState(false);
+  const [showValues, setShowValues] = useState(true);
 
   // ── Error state ────────────────────────────────────────────────────────────
   if (error && !loading) {
@@ -148,21 +69,12 @@ export function DashboardScreen() {
   // ── Main screen ────────────────────────────────────────────────────────────
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background.primary} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background.primary} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          /*
-           * RefreshControl is the pull-to-refresh affordance for ScrollView.
-           * FlatList has `refreshing` + `onRefresh` as direct props because
-           * it's designed for lists. ScrollView is generic — you attach a
-           * RefreshControl as a prop explicitly.
-           *
-           * tintColor: the spinner colour on iOS.
-           * colors: the spinner colour on Android (array for animation frames).
-           */
           <RefreshControl
             refreshing={loading}
             onRefresh={refresh}
@@ -173,97 +85,127 @@ export function DashboardScreen() {
       >
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <View style={styles.header}>
-          <View>
-            {/*
-             * "Habari 👋" — Swahili for "Hello" / "How are you?" (greeting form).
-             * In Kenya, shopkeepers greet customers with "Habari?" and customers
-             * reply "Nzuri" (good). This single word signals the app was made
-             * for Kenyan users — it's the difference between a product and
-             * a productised spreadsheet.
-             */}
-            <Text style={styles.greeting}>Habari 👋</Text>
-            <Text style={styles.greetingSub}>Here's your shop overview</Text>
+          <Pressable style={styles.iconButton}>
+            <Ionicons name="menu-outline" size={24} color={colors.text.primary} />
+          </Pressable>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.greeting}>Good morning, Alex 👋</Text>
+            <Text style={styles.greetingSub}>Here's your business overview</Text>
           </View>
-          <View style={styles.dateChip}>
-            <Text style={styles.dateText}>{formatHeaderDate()}</Text>
-          </View>
+          <Pressable style={styles.iconButton}>
+            <Ionicons name="notifications-outline" size={24} color={colors.text.primary} />
+          </Pressable>
         </View>
 
-        {/* ── Stat cards — horizontal scroll ─────────────────────────────── */}
-        {/*
-         * Three cards side by side. On small phones, they may overflow — a
-         * horizontal ScrollView lets the user swipe to see all three without
-         * shrinking them. `showsHorizontalScrollIndicator={false}` hides the
-         * scroll bar indicator (clean look on dark theme).
-         */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.statCardsRow}
-        >
-          <StatCard
-            label="Total Owed"
-            value={formatKES(totalOutstanding)}
-            sublabel={`${customerCount} customer${customerCount !== 1 ? 's' : ''}`}
-            color={colors.debt}
-            icon="📋"
-          />
-          <StatCard
-            label="Active Debtors"
-            value={String(activeDebtorCount)}
-            sublabel="with unpaid balance"
-            color={colors.accent.teal}
-            icon="👥"
-          />
-          <StatCard
-            label="Today's Debts"
-            value={formatKES(todayTotal)}
-            sublabel="recorded today"
-            color={todayTotal > 0 ? colors.debt : colors.text.primary}
-            icon="📅"
-          />
-        </ScrollView>
-
-        {/* ── Section: This Week ─────────────────────────────────────────── */}
-        <View style={styles.section}>
-          <SectionHeader title="This Week" />
-          <WeeklyChart data={dailyTotals} />
-        </View>
-
-        {/* ── Section: Top Debtors ──────────────────────────────────────── */}
-        <View style={styles.section}>
-          <SectionHeader
-            title="Top Debtors"
-            action="See all"
-            onAction={() => {
-              // Day 5: navigate to CustomerListScreen (sorted by balance)
-              console.log('[Dashboard] navigate to customers');
-            }}
-          />
-          {topDebtors.length === 0 ? (
-            <View style={styles.emptySection}>
-              <Text style={styles.emptyText}>No outstanding debts 🎉</Text>
-            </View>
-          ) : (
-            <View style={styles.debtorsContainer}>
-              {topDebtors.map((debtor, index) => (
-                <TopDebtorRow
-                  key={debtor.customerId}
-                  debtor={debtor}
-                  rank={index + 1}
-                  onPress={() => {
-                    // Day 5: navigate to that customer's TransactionScreen
-                    console.log('[Dashboard] navigate to customer', debtor.customerId);
-                  }}
+        {/* ── Prominent Receivables Card ──────────────────────────────────── */}
+        <View style={styles.receivablesCard}>
+          {/* Green Part */}
+          <View style={styles.receivablesGreenPart}>
+            <View style={styles.receivablesHeader}>
+              <Text style={styles.receivablesLabel}>Total Receivables</Text>
+              <Pressable
+                onPress={() => setShowValues(!showValues)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons
+                  name={showValues ? 'eye-outline' : 'eye-off-outline'}
+                  size={20}
+                  color={colors.white}
                 />
-              ))}
+              </Pressable>
             </View>
-          )}
+            <Text style={styles.receivablesAmount}>
+              {showValues ? formatKES(totalReceivables) : '••••••'}
+            </Text>
+            <Text style={styles.receivablesCustomers}>
+              from {customerCount} customer{customerCount !== 1 ? 's' : ''}
+            </Text>
+          </View>
+
+          {/* Sub Details (Amount Collected & Outstanding) */}
+          <View style={styles.receivablesSubDetails}>
+            <View style={styles.subDetailCol}>
+              <Text style={styles.subDetailLabel}>Amount Collected</Text>
+              <Text style={[styles.subDetailValue, { color: colors.accent.teal }]}>
+                {showValues ? formatKES(totalCollected) : '••••••'}
+              </Text>
+            </View>
+            <View style={styles.subDetailDivider} />
+            <View style={styles.subDetailCol}>
+              <Text style={styles.subDetailLabel}>Outstanding</Text>
+              <Text style={[styles.subDetailValue, { color: colors.debt }]}>
+                {showValues ? formatKES(totalOutstanding) : '••••••'}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {/* ── Section: Recent Activity ──────────────────────────────────── */}
+        {/* ── Quick Actions Section ───────────────────────────────────────── */}
         <View style={styles.section}>
-          <SectionHeader title="Recent Activity" />
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.quickActionsRow}>
+            {/* Add Credit */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionCard,
+                pressed && styles.cardPressed,
+              ]}
+              onPress={() => {
+                navigation.navigate('Customers');
+              }}
+            >
+              <View style={[styles.actionIconContainer, { backgroundColor: '#EF444412' }]}>
+                <Ionicons name="document-text-outline" size={22} color={colors.debt} />
+              </View>
+              <Text style={styles.actionCardTitle}>Add Credit</Text>
+              <Text style={styles.actionCardSubtitle}>Give credit</Text>
+            </Pressable>
+
+            {/* Record Payment */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionCard,
+                pressed && styles.cardPressed,
+              ]}
+              onPress={() => {
+                navigation.navigate('Customers');
+              }}
+            >
+              <View style={[styles.actionIconContainer, { backgroundColor: '#10B98112' }]}>
+                <Ionicons name="cash-outline" size={22} color={colors.accent.teal} />
+              </View>
+              <Text style={styles.actionCardTitle}>Record Payment</Text>
+              <Text style={styles.actionCardSubtitle}>Receive payment</Text>
+            </Pressable>
+
+            {/* Add Customer */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionCard,
+                pressed && styles.cardPressed,
+              ]}
+              onPress={() => {
+                setModalVisible(true);
+              }}
+            >
+              <View style={[styles.actionIconContainer, { backgroundColor: '#3B82F612' }]}>
+                <Ionicons name="person-add-outline" size={22} color="#3B82F6" />
+              </View>
+              <Text style={styles.actionCardTitle}>Add Customer</Text>
+              <Text style={styles.actionCardSubtitle}>New customer</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* ── Recent Transactions Section ─────────────────────────────────── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+            <Pressable onPress={() => navigation.navigate('Customers')}>
+              <Text style={styles.viewAllText}>View all</Text>
+            </Pressable>
+          </View>
+
           {recentActivity.length === 0 ? (
             <View style={styles.emptySection}>
               <Text style={styles.emptyText}>No transactions yet</Text>
@@ -282,59 +224,26 @@ export function DashboardScreen() {
           )}
         </View>
 
-        {/* ── Bottom padding for tab bar (added Day 5) ─────────────────── */}
+        {/* Bottom padding for safety */}
         <View style={styles.bottomPadding} />
       </ScrollView>
+
+      {/* ── Add Customer Modal ───────────────────────────────────────────── */}
+      <AddCustomerModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSuccess={() => {
+          setModalVisible(false);
+          refresh();
+        }}
+      />
     </View>
   );
 }
-
-// ─── SectionHeader ────────────────────────────────────────────────────────────
-
-interface SectionHeaderProps {
-  title: string;
-  action?: string;
-  onAction?: () => void;
-}
-
-function SectionHeader({ title, action, onAction }: SectionHeaderProps) {
-  return (
-    <View style={headerStyles.container}>
-      <Text style={headerStyles.title}>{title}</Text>
-      {action && onAction ? (
-        <Pressable onPress={onAction} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={headerStyles.action}>{action}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
-const headerStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  title: {
-    color: colors.text.muted,
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-  },
-  action: {
-    color: colors.accent.teal,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-});
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // ── Root ──────────────────────────────────────────────────────────────────
   screen: {
     flex: 1,
     backgroundColor: colors.background.primary,
@@ -385,88 +294,201 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingVertical: 16,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    paddingHorizontal: 12,
   },
   greeting: {
     color: colors.text.primary,
-    fontSize: 26,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     letterSpacing: -0.5,
   },
   greetingSub: {
-    color: colors.text.muted,
+    color: colors.text.secondary,
     fontSize: 12,
     marginTop: 2,
   },
-  dateChip: {
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.background.secondary,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.background.tertiary,
-    marginTop: 4,
   },
-  dateText: {
-    color: colors.text.secondary,
+
+  // ── Receivables Card ─────────────────────────────────────────────────────
+  receivablesCard: {
+    backgroundColor: colors.background.primary,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.background.tertiary,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
+    marginTop: 8,
+  },
+  receivablesGreenPart: {
+    backgroundColor: colors.accent.teal,
+    padding: 20,
+  },
+  receivablesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  receivablesLabel: {
+    color: 'rgba(255, 255, 255, 0.85)',
     fontSize: 12,
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-
-  // ── Stat cards row ────────────────────────────────────────────────────────
-  statCardsRow: {
+  receivablesAmount: {
+    color: colors.white,
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginVertical: 6,
+  },
+  receivablesCustomers: {
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 12,
+  },
+  receivablesSubDetails: {
     flexDirection: 'row',
-    gap: 12,
-    paddingBottom: 4,
-    paddingRight: 4, // prevent last card from being clipped
+    backgroundColor: colors.background.secondary,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  subDetailCol: {
+    flex: 1,
+  },
+  subDetailLabel: {
+    color: colors.text.secondary,
+    fontSize: 11,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  subDetailValue: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  subDetailDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: colors.background.tertiary,
+    marginHorizontal: 16,
   },
 
-  // ── Sections ──────────────────────────────────────────────────────────────
+  // ── Quick Actions ────────────────────────────────────────────────────────
   section: {
     marginTop: 24,
   },
-
-  // ── Debtors container ─────────────────────────────────────────────────────
-  debtorsContainer: {
-    backgroundColor: colors.background.secondary,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    color: colors.text.primary,
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  viewAllText: {
+    color: colors.accent.teal,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionCard: {
+    flex: 1,
+    backgroundColor: colors.background.primary,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.background.tertiary,
-    overflow: 'hidden',
-    paddingVertical: 4,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  actionIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  actionCardTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text.primary,
+    textAlign: 'center',
+  },
+  actionCardSubtitle: {
+    fontSize: 10,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  cardPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
   },
 
-  // ── Activity container ────────────────────────────────────────────────────
+  // ── Recent Activity ──────────────────────────────────────────────────────
   activityContainer: {
-    backgroundColor: colors.background.secondary,
+    backgroundColor: colors.background.primary,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.background.tertiary,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
   },
   divider: {
     height: 1,
     backgroundColor: colors.background.tertiary,
-    marginHorizontal: 0,
   },
-
-  // ── Empty states ──────────────────────────────────────────────────────────
   emptySection: {
-    paddingVertical: 20,
+    paddingVertical: 24,
     alignItems: 'center',
-    backgroundColor: colors.background.secondary,
+    backgroundColor: colors.background.primary,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.background.tertiary,
   },
   emptyText: {
-    color: colors.text.muted,
+    color: colors.text.secondary,
     fontSize: 13,
   },
 
-  // ── Bottom padding ────────────────────────────────────────────────────────
+  // ── Bottom Padding ───────────────────────────────────────────────────────
   bottomPadding: {
-    height: 100, // space for Day 5 tab bar
+    height: 40,
   },
 });

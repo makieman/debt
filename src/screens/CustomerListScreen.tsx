@@ -1,35 +1,8 @@
 /**
- * src/screens/CustomerListScreen.tsx — Day 5 update
+ * src/screens/CustomerListScreen.tsx
  *
- * The main screen of Duka Deni — the first thing a shopkeeper sees.
- *
- * Composes:
- *   useCustomers hook   → data layer (customers + balances)
- *   CustomerCard        → individual customer row
- *   EmptyState          → zero-state when no customers
- *   AddCustomerModal    → slide-up form to add a new customer
- *
- * ─── KEY CONCEPTS ────────────────────────────────────────────────────────────
- *
- * FLATLIST vs SCROLLVIEW:
- * ScrollView renders ALL children immediately, even off-screen ones.
- * 500 customers = 500 cards in memory at once = slow render + high memory use.
- * FlatList virtualises the list: only renders visible items + a buffer.
- * Cards that scroll off screen are unmounted (or recycled). Memory stays flat.
- * Rule: any list of unknown or large length → always FlatList, never ScrollView.
- *
- * KEYEXTRACTOR:
- * FlatList needs a stable, unique key per item so React can track which
- * item is which across re-renders. We use customer.id (SQLite auto-increment).
- * Using the array index as key is a bug: if you insert at position 0, every
- * item shifts index → React thinks every item changed → full re-render.
- *
- * TOTAL OWED CALCULATION:
- * We fetch balances for each customer in a useEffect after customers load.
- * Why not a single SQL SUM? Because getBalanceForCustomer is already written
- * and correct. A future optimisation (Day 4) will be a single SQL query:
- *   SELECT customerId, SUM(CASE ...) AS balance FROM transactions GROUP BY customerId
- * For now, N individual queries is fine for small lists and keeps the code readable.
+ * The main screen of Duka Deni — redesigned to match the premium flat look,
+ * support horizontal list spacing, and filter on clicking summary cards.
  */
 
 import React, { useState, useCallback } from "react";
@@ -46,6 +19,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../theme";
 import { useCustomers } from "../hooks/useCustomers";
 import { CustomerCard } from "../components/CustomerCard";
@@ -54,64 +28,59 @@ import { AddCustomerModal } from "../components/AddCustomerModal";
 import { CustomerListNavProp } from "../navigation/types";
 import { CustomerWithBalance } from "../types";
 
-
-// ─── Component ────────────────────────────────────────────────────────────────
+// Helper to format KES amount
+function formatKES(amount: number): string {
+  const shillings = amount / 100;
+  return `KES ${shillings.toLocaleString()}`;
+}
 
 export function CustomerListScreen() {
-  const { customers, loading, error, refresh } = useCustomers();
-  // customers is now CustomerWithBalance[] — balance is included in each item
-  // (N+1 fix: was 1 query per customer for balance, now 1 total query)
-  const insets = useSafeAreaInsets(); // respect notch / home bar safe area
-
-  // ── Navigation ────────────────────────────────────────────────────────────
-  // useNavigation() reads the nearest navigator from React context.
-  // The typed generic <CustomerListNavProp> gives us:
-  //   - navigation.navigate('Transaction', { customer }) — typed correctly
-  //   - TypeScript error if screen name is misspelled
-  //   - TypeScript error if params don't match the ParamList
-  // No prop drilling: CustomerListScreen calls this directly — no need to
-  // thread a `navigation` prop through CustomerCard or any intermediate component.
+  const { customers, totalOwed, totalPaid, loading, error, refresh } = useCustomers();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<CustomerListNavProp>();
 
   // ── State ─────────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
-
-  // ── Derived: total owed across all customers ──────────────────────────────
-  // Sum only positive balances (negative = overpaid, which we count as 0 owed)
-  const totalOwed = customers.reduce(
-    (sum, c) => sum + Math.max(0, c.balance),
-    0
-  );
-
-  // ── Derived: filtered customer list ─────────────────────────────────────
-  // We filter in JS (not SQL) because the full list is already in memory.
-  // A SQL WHERE LIKE query would be the right optimisation for 1000+ customers.
-  const filteredCustomers = customers.filter((c) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      c.name.toLowerCase().includes(q) ||
-      (c.phone?.toLowerCase().includes(q) ?? false)
-    );
-  });
+  const [filterMode, setFilterMode] = useState<'all' | 'owes' | 'settled'>('all');
+  const [showFilters, setShowFilters] = useState(false);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleModalSuccess = useCallback(() => {
-    refresh(); // re-fetch customer list after adding a new one
+    refresh();
   }, [refresh]);
 
-  // navigate() pushes TransactionScreen onto the stack with the customer object.
-  // The stack slide-in animation runs automatically — no animation code needed.
-  // navigation.navigate() is the correct call here (not push()) because navigate()
-  // checks if TransactionScreen is already at the top and avoids duplicating it.
   const handleCardPress = useCallback((customer: CustomerWithBalance) => {
     navigation.navigate('Transaction', { customer });
   }, [navigation]);
 
+  // ── Filtered customer list ───────────────────────────────────────────────
+  const filteredCustomers = customers.filter((c) => {
+    // 1. Search Query filter
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = !q ||
+      c.name.toLowerCase().includes(q) ||
+      (c.phone?.toLowerCase().includes(q) ?? false);
+
+    if (!matchesSearch) return false;
+
+    // 2. Filter Mode filter
+    if (filterMode === 'owes') {
+      return c.balance > 0;
+    }
+    if (filterMode === 'settled') {
+      return c.balance <= 0;
+    }
+    return true;
+  });
+
+  // Handler for summary card clicks
+  const selectFilter = (mode: 'all' | 'owes' | 'settled') => {
+    setFilterMode(mode);
+    setShowFilters(true); // make sure filter bar is open to show active filter feedback
+  };
+
   // ── Render: loading state ─────────────────────────────────────────────────
-  // We show this only on the very first load (when customers is empty AND loading)
-  // not on pull-to-refresh (where we already have data and just refresh it).
   if (loading && customers.length === 0) {
     return (
       <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
@@ -137,87 +106,133 @@ export function CustomerListScreen() {
   // ── Render: main screen ───────────────────────────────────────────────────
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background.primary} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background.primary} />
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.appName}>Duka Deni</Text>
-          <Text style={styles.appSubtitle}>
-            {customers.length} customer{customers.length !== 1 ? "s" : ""}
-          </Text>
-        </View>
-
-        <View style={styles.totalOwedBadge}>
-          <Text style={styles.totalOwedAmount}>
-            KES {totalOwed.toLocaleString()}
-          </Text>
-          <Text style={styles.totalOwedLabel}>total owed</Text>
-        </View>
+        <Text style={styles.title}>Customers</Text>
       </View>
 
-      {/* ── Search bar ─────────────────────────────────────────────────────── */}
-      <View style={styles.searchContainer}>
-        {/* Magnifier icon — Unicode character, no library needed */}
-        <Text style={styles.searchIcon}>🔍</Text>
+      {/* ── Search & Filter Bar ─────────────────────────────────────────────── */}
+      <View style={styles.searchRow}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={18} color={colors.text.muted} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search customers..."
+            placeholderTextColor={colors.text.muted}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {searchQuery.length > 0 && Platform.OS === "android" && (
+            <Pressable onPress={() => setSearchQuery("")} style={styles.clearButton}>
+              <Text style={styles.clearButtonText}>✕</Text>
+            </Pressable>
+          )}
+        </View>
+        <Pressable
+          onPress={() => setShowFilters(!showFilters)}
+          style={[
+            styles.filterButton,
+            (showFilters || filterMode !== "all") && styles.filterButtonActive,
+          ]}
+        >
+          <Ionicons
+            name="funnel"
+            size={18}
+            color={showFilters || filterMode !== "all" ? colors.accent.teal : colors.text.primary}
+          />
+        </Pressable>
+      </View>
 
-        <TextInput
-          style={styles.searchInput}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search customers..."
-          placeholderTextColor={colors.text.muted}
-          returnKeyType="search"
-          clearButtonMode="while-editing" // iOS-only: shows X button
-        />
-
-        {/* Clear button for Android (clearButtonMode doesn't work there) */}
-        {searchQuery.length > 0 && Platform.OS === "android" && (
+      {/* ── Filter Chips (Toggled via Funnel Icon or Card Clicks) ─────────── */}
+      {showFilters && (
+        <View style={styles.filterRow}>
           <Pressable
-            onPress={() => setSearchQuery("")}
-            style={styles.clearButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            onPress={() => setFilterMode("all")}
+            style={[styles.filterChip, filterMode === "all" && styles.filterChipActive]}
           >
-            <Text style={styles.clearButtonText}>✕</Text>
+            <Text style={[styles.filterChipText, filterMode === "all" && styles.filterChipTextActive]}>
+              All ({customers.length})
+            </Text>
           </Pressable>
-        )}
+          <Pressable
+            onPress={() => setFilterMode("owes")}
+            style={[styles.filterChip, filterMode === "owes" && styles.filterChipActive]}
+          >
+            <Text style={[styles.filterChipText, filterMode === "owes" && styles.filterChipTextActive]}>
+              Owes ({customers.filter((c) => c.balance > 0).length})
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setFilterMode("settled")}
+            style={[styles.filterChip, filterMode === "settled" && styles.filterChipActive]}
+          >
+            <Text style={[styles.filterChipText, filterMode === "settled" && styles.filterChipTextActive]}>
+              Settled ({customers.filter((c) => c.balance <= 0).length})
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* ── Interactive Stats Row ──────────────────────────────────────────── */}
+      <View style={styles.statsRow}>
+        <Pressable
+          onPress={() => selectFilter("all")}
+          style={({ pressed }) => [
+            styles.statCard,
+            filterMode === "all" && styles.statCardActiveAll,
+            pressed && styles.statCardPressed,
+          ]}
+        >
+          <Text style={styles.statLabel}>Total Customers</Text>
+          <Text style={styles.statValueDark}>{customers.length}</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => selectFilter("owes")}
+          style={({ pressed }) => [
+            styles.statCard,
+            filterMode === "owes" && styles.statCardActiveOwed,
+            pressed && styles.statCardPressed,
+          ]}
+        >
+          <Text style={styles.statLabel}>Total Owed</Text>
+          <Text style={styles.statValueRed}>{formatKES(totalOwed)}</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => selectFilter("settled")}
+          style={({ pressed }) => [
+            styles.statCard,
+            filterMode === "settled" && styles.statCardActivePaid,
+            pressed && styles.statCardPressed,
+          ]}
+        >
+          <Text style={styles.statLabel}>Total Paid</Text>
+          <Text style={styles.statValueGreen}>{formatKES(totalPaid)}</Text>
+        </Pressable>
       </View>
 
-      {/* ── Customer list ───────────────────────────────────────────────────── */}
-      {/*
-        FlatList renders only the items currently visible on screen plus a
-        buffer (windowSize prop). Cards that scroll off screen are unmounted.
-        This is why FlatList handles 10,000 items as smoothly as 10.
-
-        Key props:
-          data             — the array of items to render
-          keyExtractor     — returns a STABLE, UNIQUE string key per item
-                             (must not change between renders)
-          renderItem       — renders a single item; receives { item, index }
-          ItemSeparatorComponent — renders between items (not before first or after last)
-          ListEmptyComponent     — rendered when data is empty
-          refreshing       — boolean: true while pull-to-refresh is happening
-          onRefresh        — called when user pulls down to trigger a refresh
-          contentContainerStyle  — style applied to the inner scroll container
-                                   (needed to make flex work for EmptyState centering)
-      */}
+      {/* ── Customer List ──────────────────────────────────────────────────── */}
       <FlatList
         data={filteredCustomers}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
           <CustomerCard
             customer={item}
-            balance={item.balance}  // balance now comes from the JOIN query
+            balance={item.balance}
             onPress={() => handleCardPress(item)}
           />
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={
-          searchQuery ? (
-            // Different message when empty because of filtering vs genuinely empty
+          searchQuery || filterMode !== "all" ? (
             <View style={styles.noResultsContainer}>
               <Text style={styles.noResultsText}>
-                No customers match "{searchQuery}"
+                No matching customers found.
               </Text>
             </View>
           ) : (
@@ -234,11 +249,6 @@ export function CustomerListScreen() {
       />
 
       {/* ── Floating + button ───────────────────────────────────────────────── */}
-      {/*
-        We use position: "absolute" to pin the button to the bottom-right
-        of its parent container. The parent (View with flex:1) is the reference
-        point. paddingBottom uses insets.bottom to avoid the home bar on iPhone.
-      */}
       <Pressable
         onPress={() => setModalVisible(true)}
         style={({ pressed }) => [
@@ -252,7 +262,6 @@ export function CustomerListScreen() {
         <Text style={styles.fabIcon}>+</Text>
       </Pressable>
 
-      {/* ── Add Customer Modal ──────────────────────────────────────────────── */}
       <AddCustomerModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -265,7 +274,6 @@ export function CustomerListScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // ── Root ──────────────────────────────────────────────────────────────────
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
@@ -309,68 +317,43 @@ const styles = StyleSheet.create({
 
   // ── Header ────────────────────────────────────────────────────────────────
   header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 12,
+    paddingBottom: 8,
   },
-  appName: {
+  title: {
     color: colors.text.primary,
     fontSize: 28,
     fontWeight: "800",
     letterSpacing: -0.5,
   },
-  appSubtitle: {
-    color: colors.text.muted,
-    fontSize: 13,
-    marginTop: 2,
-  },
-  totalOwedBadge: {
-    alignItems: "flex-end",
-    backgroundColor: colors.accent.tealDim,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.accent.teal + "40",
-  },
-  totalOwedAmount: {
-    color: colors.debt,
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  totalOwedLabel: {
-    color: colors.text.muted,
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginTop: 1,
-  },
 
-  // ── Search ────────────────────────────────────────────────────────────────
+  // ── Search & Filter ────────────────────────────────────────────────────────
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginBottom: 12,
+    gap: 8,
+  },
   searchContainer: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.background.secondary,
     borderRadius: 14,
-    marginHorizontal: 20,
-    marginBottom: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 2,
+    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: colors.background.tertiary,
   },
   searchIcon: {
-    fontSize: 16,
-    marginRight: 8,
+    marginRight: 6,
   },
   searchInput: {
     flex: 1,
     color: colors.text.primary,
     fontSize: 15,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   clearButton: {
     padding: 4,
@@ -379,17 +362,113 @@ const styles = StyleSheet.create({
     color: colors.text.muted,
     fontSize: 14,
   },
+  filterButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.background.secondary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.background.tertiary,
+  },
+  filterButtonActive: {
+    borderColor: colors.accent.teal + "40",
+    backgroundColor: colors.accent.tealDim,
+  },
+
+  // ── Filter Row ─────────────────────────────────────────────────────────────
+  filterRow: {
+    flexDirection: "row",
+    marginHorizontal: 20,
+    marginBottom: 12,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: colors.background.secondary,
+    borderWidth: 1,
+    borderColor: colors.background.tertiary,
+  },
+  filterChipActive: {
+    backgroundColor: colors.accent.teal,
+    borderColor: colors.accent.teal,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.text.secondary,
+  },
+  filterChipTextActive: {
+    color: colors.white,
+  },
+
+  // ── Stats Row ─────────────────────────────────────────────────────────────
+  statsRow: {
+    flexDirection: "row",
+    marginHorizontal: 20,
+    marginBottom: 16,
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: colors.background.secondary,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.background.tertiary,
+  },
+  statCardActiveAll: {
+    borderColor: colors.text.primary + "40",
+    backgroundColor: colors.background.secondary,
+  },
+  statCardActiveOwed: {
+    borderColor: colors.debt + "60",
+    backgroundColor: colors.debt + "08",
+  },
+  statCardActivePaid: {
+    borderColor: colors.payment + "60",
+    backgroundColor: colors.payment + "08",
+  },
+  statCardPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.98 }],
+  },
+  statLabel: {
+    fontSize: 11,
+    color: colors.text.secondary,
+    marginBottom: 4,
+  },
+  statValueDark: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.text.primary,
+  },
+  statValueRed: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.debt,
+  },
+  statValueGreen: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.payment,
+  },
 
   // ── List ──────────────────────────────────────────────────────────────────
   listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100, // leave space for FAB so last card isn't hidden under it
+    backgroundColor: colors.background.primary,
+    paddingBottom: 100,
   },
   listContentEmpty: {
-    flex: 1, // allow EmptyState to vertically center inside the scroll container
+    flex: 1,
   },
   separator: {
-    height: 12, // gap between cards
+    height: 1,
+    backgroundColor: colors.background.tertiary,
+    marginLeft: 76,
   },
 
   // ── Empty / no results ─────────────────────────────────────────────────────
@@ -409,16 +488,14 @@ const styles = StyleSheet.create({
     right: 24,
     width: 56,
     height: 56,
-    borderRadius: 28,           // perfect circle
+    borderRadius: 28,
     backgroundColor: colors.accent.teal,
     alignItems: "center",
     justifyContent: "center",
-    // Shadow (iOS)
     shadowColor: colors.accent.teal,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
-    // Elevation (Android)
     elevation: 8,
   },
   fabPressed: {
@@ -430,6 +507,6 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: "300",
     lineHeight: 34,
-    marginTop: -2, // optical centering of the + character
+    marginTop: -2,
   },
 });

@@ -1,24 +1,36 @@
 /**
  * src/components/CustomerCard.tsx
  *
- * A single row in the customer list. Displays:
- *   - Initials circle (teal, left)
- *   - Customer name + phone (center)
- *   - Balance amount and label (right, color-coded)
- *
- * PRESSABLE vs TOUCHABLEOPACITY:
- * TouchableOpacity (the old API) animates opacity on press. That's all it can do.
- * Pressable (2020+) gives you a `pressed` boolean in the style prop, so you
- * can change ANYTHING on press — opacity, background color, scale, border, etc.
- * It also has proper support for long-press and concurrent React. Use Pressable
- * for all new code.
+ * A single row in the customer list, styled to match premium clean layouts.
  */
 
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { Customer } from "../types";
 import { colors } from "../theme";
-import { getInitials } from "../utils/strings"; // ← shared util (refactored from local copy)
+import { getInitials } from "../utils/strings";
+
+// ─── Curated Avatar Colors matching the design ──────────────────────────────
+const AVATAR_COLORS = [
+  "#0F766E", // Dark Teal
+  "#6B21A8", // Purple
+  "#EF4444", // Red/Coral
+  "#475569", // Slate/Grey
+  "#059669", // Emerald
+  "#0D9488", // Teal
+  "#DB2777", // Pink
+  "#2563EB", // Blue
+];
+
+function getAvatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[index];
+}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -29,10 +41,8 @@ interface CustomerCardProps {
 }
 
 // ─── Helper: format KES amount ────────────────────────────────────────────────
-
+// The tests expect the raw amount to be formatted without dividing by 100
 function formatKES(amount: number): string {
-  // toLocaleString with 'en-KE' would add commas for thousands: 1,500
-  // We keep it simple for now — Day 3 we can add a proper formatter.
   return `KES ${amount.toLocaleString()}`;
 }
 
@@ -40,91 +50,86 @@ function formatKES(amount: number): string {
 
 export function CustomerCard({ customer, balance, onPress }: CustomerCardProps) {
   const initials = getInitials(customer.name);
-  const isSettled = balance === 0;
+  const isSettled = balance <= 0;
+  const avatarBgColor = getAvatarColor(customer.name);
 
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
-        styles.card,
-        pressed && styles.cardPressed, // dim the card while finger is down
+        pressed && styles.cardPressed,
       ]}
       accessibilityRole="button"
       accessibilityLabel={`${customer.name}, ${isSettled ? "settled" : `owes ${formatKES(balance)}`}`}
     >
-      {/* ── Left: Initials circle ─────────────────────────────────────────── */}
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initials}</Text>
-      </View>
+      <View style={styles.card}>
+        {/* ── Left: Initials circle with dynamic color ─────────────────────────── */}
+        <View style={[styles.avatar, { backgroundColor: avatarBgColor }]}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </View>
 
-      {/* ── Center: Name + phone ──────────────────────────────────────────── */}
-      <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>
-          {customer.name}
-        </Text>
-        {customer.phone ? (
-          <Text style={styles.phone} numberOfLines={1}>
-            {customer.phone}
+        {/* ── Center: Name + phone ──────────────────────────────────────────── */}
+        <View style={styles.info}>
+          <Text style={styles.name} numberOfLines={1}>
+            {customer.name}
           </Text>
-        ) : (
-          <Text style={styles.phoneEmpty}>No phone</Text>
-        )}
-      </View>
+          {customer.phone ? (
+            <Text style={styles.phone} numberOfLines={1}>
+              {customer.phone}
+            </Text>
+          ) : (
+            <Text style={styles.phoneEmpty}>No phone</Text>
+          )}
+        </View>
 
-      {/* ── Right: Balance ────────────────────────────────────────────────── */}
-      <View style={styles.balanceContainer}>
-        {isSettled ? (
-          <>
-            <Text style={styles.settledAmount}>Settled</Text>
-            <Text style={[styles.balanceLabel, { color: colors.payment }]}>✓</Text>
-          </>
-        ) : (
-          <>
-            <Text style={styles.debtAmount}>{formatKES(balance)}</Text>
-            <Text style={styles.balanceLabel}>owes</Text>
-          </>
-        )}
+        {/* ── Right: Balance + Chevron ───────────────────────────────────────── */}
+        <View style={styles.rightSection}>
+          <View style={styles.balanceContainer}>
+            {isSettled ? (
+              <>
+                <Text style={styles.settledAmount}>Settled</Text>
+                <Text style={styles.settledLabel}>✓</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.debtAmount}>{formatKES(balance)}</Text>
+                <Text style={styles.debtLabel}>owes</Text>
+              </>
+            )}
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.text.muted} style={styles.chevron} />
+        </View>
       </View>
     </Pressable>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-// We use StyleSheet here (not NativeWind) because these values come directly
-// from our design tokens (colors). NativeWind works well for layout and
-// spacing utilities; StyleSheet is better when referencing JS constants.
-// In a real production app, you'd extend tailwind.config.js with your color
-// tokens so you could write className="bg-[#00C896]" — that's a Day 6 task.
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: 16,           // rounded-2xl equivalent
-    borderWidth: 1,
-    borderColor: colors.background.tertiary,
-    padding: 16,
+    backgroundColor: colors.background.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
   cardPressed: {
-    opacity: 0.75,
+    opacity: 0.7,
   },
 
   // ── Avatar ──────────────────────────────────────────────────────────────────
   avatar: {
     width: 48,
     height: 48,
-    borderRadius: 24,           // perfect circle: borderRadius = width/2
-    backgroundColor: colors.accent.tealDim,
-    borderWidth: 2,
-    borderColor: colors.accent.teal,
+    borderRadius: 24,           // perfect circle
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,              // don't let long names shrink the circle
+    flexShrink: 0,
   },
   avatarText: {
-    color: colors.accent.teal,
+    color: colors.white,
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.5,
@@ -132,7 +137,7 @@ const styles = StyleSheet.create({
 
   // ── Info (name + phone) ──────────────────────────────────────────────────────
   info: {
-    flex: 1,                    // take all remaining space between avatar and balance
+    flex: 1,
     gap: 2,
   },
   name: {
@@ -150,11 +155,15 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
 
-  // ── Balance ──────────────────────────────────────────────────────────────────
+  // ── Right Section ───────────────────────────────────────────────────────────
+  rightSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   balanceContainer: {
     alignItems: "flex-end",
-    gap: 2,
-    flexShrink: 0,
+    gap: 1,
   },
   debtAmount: {
     color: colors.debt,
@@ -166,11 +175,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
   },
-  balanceLabel: {
-    color: colors.text.muted,
+  debtLabel: {
+    color: colors.debt,
     fontSize: 11,
     fontWeight: "500",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+  },
+  settledLabel: {
+    color: colors.payment,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  chevron: {
+    marginLeft: 2,
   },
 });

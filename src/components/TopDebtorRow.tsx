@@ -93,8 +93,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   rowHighlighted: {
-    // Rank 1 gets a subtle tertiary background to stand out from the list
-    backgroundColor: colors.background.tertiary,
+    // Rank 1 gets a subtle secondary background to stand out from the list
+    backgroundColor: colors.background.secondary,
   },
   rowPressed: {
     opacity: 0.75,
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.background.tertiary,
+    backgroundColor: colors.background.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,

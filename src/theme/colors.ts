@@ -19,36 +19,33 @@
 
 export const colors = {
   // ── Backgrounds ─────────────────────────────────────────────────────────────
-  // Three layers of depth create visual hierarchy without needing shadows.
-  // primary is the darkest: the "floor" everything sits on.
-  // secondary is slightly lighter: cards, modals, input fields.
-  // tertiary is the lightest dark shade: borders and dividers.
+  // primary is the main floor (pure white #FFFFFF)
+  // secondary is slightly darker (soft gray #F8FAFC) for cards and inputs
+  // tertiary is for borders, dividers, subtle separators (#E5E7EB)
   background: {
-    primary: "#0F1117",    // deep slate — main app background
-    secondary: "#1A1D27",  // slightly lighter — cards, sheets
-    tertiary: "#22263A",   // borders, dividers, subtle separators
+    primary: "#FFFFFF",
+    secondary: "#F8FAFC",
+    tertiary: "#E5E7EB",
   },
 
   // ── Accent ──────────────────────────────────────────────────────────────────
-  // Teal is our only action color. One accent = clear hierarchy of interaction.
+  // Emerald green is our primary action and positive accent color
   accent: {
-    teal: "#00C896",       // primary action: buttons, highlights, initials circle
-    tealDim: "#00C89620",  // teal at 12.5% opacity — subtle background tints
+    teal: "#10B981",       // primary green action
+    tealDim: "#10B98115",  // green at ~8% opacity for subtle backgrounds
   },
 
   // ── Text ────────────────────────────────────────────────────────────────────
-  // Three levels of text weight create visual hierarchy without size changes.
+  // Three levels of text weight and contrast
   text: {
-    primary: "#F0F2FF",    // main readable text — high contrast on dark bg
-    secondary: "#8A90B4",  // labels, phone numbers, subtitles
-    muted: "#4A5080",      // placeholders, hints, disabled states
+    primary: "#111827",    // dark gray for high readability
+    secondary: "#6B7280",  // muted gray for labels, phone numbers, subtitles
+    muted: "#9CA3AF",      // placeholders, hints, disabled states
   },
 
   // ── Semantic: Financial States ───────────────────────────────────────────────
-  // These are the most important colors in a debt app — they convey
-  // financial meaning at a glance. Red = money owed. Green = settled/received.
-  debt: "#FF6B6B",         // warm red — customer owes shop money
-  payment: "#00C896",      // same teal as accent — money received / settled
+  debt: "#EF4444",         // soft red - customer owes money
+  payment: "#10B981",      // emerald green - money received / settled
 
   // ── Utilities ───────────────────────────────────────────────────────────────
   white: "#FFFFFF",

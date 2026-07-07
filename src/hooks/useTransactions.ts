@@ -43,7 +43,7 @@ import { db } from '../db';
 
 interface UseTransactionsResult {
   transactions: Transaction[];
-  balance: number;      // in CENTS — use formatKES() to display
+  balance: number;      // in CENTS — use formatMoney() to display
   loading: boolean;
   error: string | null;
   refresh: () => void;

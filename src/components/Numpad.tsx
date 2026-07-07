@@ -26,7 +26,7 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import { colors } from '../theme';
+import { useThemeContext, Colors } from '../theme';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,6 +50,8 @@ const KEYS: string[][] = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function Numpad({ value, onChange, maxLength = 7 }: NumpadProps) {
+  const { colors } = useThemeContext();
+  const styles = makeStyles(colors);
 
   /**
    * handleKey processes every key press with the full validation logic.
@@ -135,6 +137,9 @@ interface NumpadKeyProps {
 }
 
 function NumpadKey({ label, onPress, isBackspace }: NumpadKeyProps) {
+  const { colors } = useThemeContext();
+  const styles = makeStyles(colors);
+
   return (
     <Pressable
       onPress={onPress}
@@ -158,7 +163,7 @@ function NumpadKey({ label, onPress, isBackspace }: NumpadKeyProps) {
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const KEY_SIZE = Math.floor((SCREEN_WIDTH - 48 - 16) / 3); // 48px side pad, 16px gap
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   container: {
     width: '100%',
     gap: 8,

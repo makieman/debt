@@ -35,8 +35,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ActivityItem } from '../types';
-import { colors } from '../theme';
-import { formatKES } from '../utils/money';
+import { useThemeContext, Colors } from '../theme';
+import { useShopProfile } from '../store/ShopProfileContext';
+import { useLanguage } from '../store/LanguageContext';
+import { formatMoney } from '../utils/money';
 import { formatTransactionDate } from '../utils/dates';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -48,6 +50,11 @@ interface ActivityFeedRowProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ActivityFeedRow({ item }: ActivityFeedRowProps) {
+  const { colors } = useThemeContext();
+  const { profile } = useShopProfile();
+  const { t } = useLanguage();
+  const currency = profile?.currency || 'KES';
+  const styles = makeStyles(colors);
   const isDebt = item.type === 'debt';
   const typeColor = isDebt ? colors.debt : colors.payment;
 
@@ -67,14 +74,14 @@ export function ActivityFeedRow({ item }: ActivityFeedRowProps) {
           {item.customerName}
         </Text>
         <Text style={styles.noteText} numberOfLines={1}>
-          {item.note ?? (isDebt ? 'Debt recorded' : 'Payment received')}
+          {item.note ?? (isDebt ? t('debtRecorded') : t('paymentReceived'))}
         </Text>
       </View>
 
       {/* ── Amount + time ─────────────────────────────────────────────────── */}
       <View style={styles.rightSection}>
         <Text style={[styles.amount, { color: typeColor }]} numberOfLines={1}>
-          {formatKES(item.amount)}
+          {formatMoney(item.amount, currency)}
         </Text>
         <Text style={styles.time}>
           {formatTransactionDate(item.createdAt)}
@@ -86,7 +93,7 @@ export function ActivityFeedRow({ item }: ActivityFeedRowProps) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -15,5 +15,6 @@
  * this file, not every component that uses colors).
  */
 
-export { colors } from "./colors";
+export { lightColors, darkColors, colors } from "./colors";
 export type { Colors } from "./colors";
+export { ThemeProvider, useThemeContext } from "./ThemeContext";

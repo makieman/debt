@@ -52,11 +52,12 @@ import { RootTabParamList } from './types';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import CustomersStack from './CustomersStack';
-import { colors } from '../theme';
+import { useThemeContext } from '../theme';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
 export default function RootTabs() {
+  const { colors } = useThemeContext();
   return (
     <Tab.Navigator
       screenOptions={{

@@ -8,7 +8,8 @@ import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Customer } from "../types";
-import { colors } from "../theme";
+import { useThemeContext, Colors } from "../theme";
+import { useShopProfile } from "../store/ShopProfileContext";
 import { getInitials } from "../utils/strings";
 
 // ─── Curated Avatar Colors matching the design ──────────────────────────────
@@ -42,13 +43,18 @@ interface CustomerCardProps {
 
 // ─── Helper: format KES amount ────────────────────────────────────────────────
 // The tests expect the raw amount to be formatted without dividing by 100
-function formatKES(amount: number): string {
-  return `KES ${amount.toLocaleString()}`;
+function formatMoney(amount: number, currency: string = 'KES'): string {
+  return `${currency} ${amount.toLocaleString()}`;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function CustomerCard({ customer, balance, onPress }: CustomerCardProps) {
+  const { colors } = useThemeContext();
+  const { profile } = useShopProfile();
+  const currency = profile?.currency || 'KES';
+  const styles = makeStyles(colors);
+
   const initials = getInitials(customer.name);
   const isSettled = balance <= 0;
   const avatarBgColor = getAvatarColor(customer.name);
@@ -60,14 +66,14 @@ export function CustomerCard({ customer, balance, onPress }: CustomerCardProps) 
         pressed && styles.cardPressed,
       ]}
       accessibilityRole="button"
-      accessibilityLabel={`${customer.name}, ${isSettled ? "settled" : `owes ${formatKES(balance)}`}`}
+      accessibilityLabel={`${customer.name}, ${isSettled ? "settled" : `owes ${formatMoney(balance, currency)}`}`}
     >
       <View style={styles.card}>
         {/* ── Left: Initials circle with dynamic color ─────────────────────────── */}
         <View style={[styles.avatar, { backgroundColor: avatarBgColor }]}>
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
-
+ 
         {/* ── Center: Name + phone ──────────────────────────────────────────── */}
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={1}>
@@ -81,7 +87,7 @@ export function CustomerCard({ customer, balance, onPress }: CustomerCardProps) 
             <Text style={styles.phoneEmpty}>No phone</Text>
           )}
         </View>
-
+ 
         {/* ── Right: Balance + Chevron ───────────────────────────────────────── */}
         <View style={styles.rightSection}>
           <View style={styles.balanceContainer}>
@@ -92,7 +98,7 @@ export function CustomerCard({ customer, balance, onPress }: CustomerCardProps) 
               </>
             ) : (
               <>
-                <Text style={styles.debtAmount}>{formatKES(balance)}</Text>
+                <Text style={styles.debtAmount}>{formatMoney(balance, currency)}</Text>
                 <Text style={styles.debtLabel}>owes</Text>
               </>
             )}
@@ -106,7 +112,7 @@ export function CustomerCard({ customer, balance, onPress }: CustomerCardProps) 
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   card: {
     backgroundColor: colors.background.primary,
     paddingVertical: 14,

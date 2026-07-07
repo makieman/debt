@@ -23,8 +23,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Transaction } from '../types';
-import { colors } from '../theme';
-import { formatKES } from '../utils/money';
+import { useThemeContext, Colors } from '../theme';
+import { useShopProfile } from '../store/ShopProfileContext';
+import { formatMoney } from '../utils/money';
 import { formatTransactionDate } from '../utils/dates';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -36,6 +37,10 @@ interface TransactionRowProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function TransactionRow({ transaction }: TransactionRowProps) {
+  const { colors } = useThemeContext();
+  const { profile } = useShopProfile();
+  const currency = profile?.currency || 'KES';
+  const styles = makeStyles(colors);
   const isDebt = transaction.type === 'debt';
   const amountColor = isDebt ? colors.debt : colors.payment;
   const amountPrefix = isDebt ? '−' : '+';  // visual direction sign
@@ -68,7 +73,7 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
 
         {/* Right: formatted amount with direction prefix */}
         <Text style={[styles.amount, { color: amountColor }]}>
-          {amountPrefix}{formatKES(transaction.amount)}
+          {amountPrefix}{formatMoney(transaction.amount, currency)}
         </Text>
       </View>
     </View>
@@ -77,7 +82,7 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   wrapper: {
     // No card background — flat row on the screen background
   },

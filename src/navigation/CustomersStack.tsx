@@ -42,7 +42,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CustomersStackParamList } from './types';
 import { CustomerListScreen } from '../screens/CustomerListScreen';
 import { TransactionScreen } from '../screens/TransactionScreen';
-import { colors } from '../theme';
+import { useThemeContext } from '../theme';
 
 // createNativeStackNavigator<T>() creates two components:
 //   Stack.Navigator — the container that manages navigation state
@@ -52,6 +52,8 @@ import { colors } from '../theme';
 const Stack = createNativeStackNavigator<CustomersStackParamList>();
 
 export default function CustomersStack() {
+  const { colors } = useThemeContext();
+
   return (
     <Stack.Navigator
       screenOptions={{

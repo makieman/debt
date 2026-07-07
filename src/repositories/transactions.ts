@@ -92,7 +92,7 @@ export async function getTransactionsByCustomer(
  * @param customerId - The customer whose balance to compute
  * @returns          - Balance in INTEGER CENTS. Positive = customer owes shop.
  *                     Zero = settled. Negative = customer has overpaid.
- *                     Use formatKES() to display this value.
+ *                     Use formatMoney() to display this value.
  */
 export async function getBalanceForCustomer(
   db: SQLiteDatabase,

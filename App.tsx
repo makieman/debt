@@ -77,6 +77,9 @@ import { db, runMigrations } from "./src/db";
 import { seedDemoData } from "./src/db/seed";
 import { RootTabs } from "./src/navigation";
 import { colors } from "./src/theme";
+import { ShopProfileProvider } from "./src/store/ShopProfileContext";
+import { LanguageProvider } from "./src/store/LanguageContext";
+import { ThemeProvider } from "./src/theme/ThemeContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -189,12 +192,18 @@ export default function App() {
   // RootTabs renders the bottom tab navigator with 3 tabs:
   //   📊 Dashboard | 👥 Customers | ⚙️ Settings
   return (
-    <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <NavigationContainer>
-        <RootTabs />
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <ShopProfileProvider>
+      <LanguageProvider>
+        <ThemeProvider>
+          <SafeAreaProvider>
+            <StatusBar style="dark" />
+            <NavigationContainer>
+              <RootTabs />
+            </NavigationContainer>
+          </SafeAreaProvider>
+        </ThemeProvider>
+      </LanguageProvider>
+    </ShopProfileProvider>
   );
 }
 

@@ -91,8 +91,10 @@ import { useNavigation } from '@react-navigation/native';
 import { useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Transaction } from '../types';
-import { colors } from '../theme';
-import { formatKES } from '../utils/money';
+import { useThemeContext, Colors } from '../theme';
+import { useShopProfile } from '../store/ShopProfileContext';
+import { useLanguage } from '../store/LanguageContext';
+import { formatMoney } from '../utils/money';
 import { useTransactions } from '../hooks/useTransactions';
 import { TransactionRow } from '../components/TransactionRow';
 import { AddTransactionModal } from '../components/AddTransactionModal';
@@ -105,6 +107,11 @@ import { TransactionRouteProp, TransactionNavProp } from '../navigation/types';
 
 export function TransactionScreen() {
   const insets = useSafeAreaInsets();  // respect notch / home indicator
+  const { colors, themeMode } = useThemeContext();
+  const { profile } = useShopProfile();
+  const { t } = useLanguage();
+  const currency = profile?.currency || 'KES';
+  const styles = makeStyles(colors);
 
   // ── Navigation hooks ───────────────────────────────────────────────────────
   //
@@ -130,23 +137,23 @@ export function TransactionScreen() {
   const balanceDisplay = (() => {
     if (balance > 0) {
       return {
-        label: 'Total owed',
-        amount: formatKES(balance),
+        label: t('totalOwedLabel'),
+        amount: formatMoney(balance, currency),
         color: colors.debt,
       };
     }
     if (balance < 0) {
       // Overpayment: show absolute value in green
       return {
-        label: 'Overpaid',
-        amount: formatKES(Math.abs(balance)),
+        label: t('overpaidLabel'),
+        amount: formatMoney(Math.abs(balance), currency),
         color: colors.payment,
       };
     }
     // Exactly zero: all settled
     return {
-      label: 'All settled',
-      amount: formatKES(0),
+      label: t('allSettledLabel'),
+      amount: formatMoney(0, currency),
       color: colors.payment,
     };
   })();
@@ -192,11 +199,11 @@ export function TransactionScreen() {
             pressed && styles.actionButtonPressed,
           ]}
           onPress={() => setShowDebtModal(true)}
-          accessibilityLabel="Add Debt"
+          accessibilityLabel={t('addDebt')}
           accessibilityRole="button"
         >
           <Text style={[styles.actionIcon, { color: colors.debt }]}>+</Text>
-          <Text style={[styles.actionLabel, { color: colors.debt }]}>Add Debt</Text>
+          <Text style={[styles.actionLabel, { color: colors.debt }]}>{t('addDebt')}</Text>
         </Pressable>
 
         {/* Record Payment button */}
@@ -207,16 +214,16 @@ export function TransactionScreen() {
             pressed && styles.actionButtonPressed,
           ]}
           onPress={() => setShowPaymentModal(true)}
-          accessibilityLabel="Record Payment"
+          accessibilityLabel={t('recordPayment')}
           accessibilityRole="button"
         >
           <Text style={[styles.actionIcon, { color: colors.payment }]}>✓</Text>
-          <Text style={[styles.actionLabel, { color: colors.payment }]}>Record Payment</Text>
+          <Text style={[styles.actionLabel, { color: colors.payment }]}>{t('recordPayment')}</Text>
         </Pressable>
       </View>
 
       {/* Section heading */}
-      <Text style={styles.sectionLabel}>TRANSACTION HISTORY</Text>
+      <Text style={styles.sectionLabel}>{t('transactionHistory').toUpperCase()}</Text>
     </View>
   );
 
@@ -224,9 +231,9 @@ export function TransactionScreen() {
   const EmptyTransactions = (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyIcon}>📋</Text>
-      <Text style={styles.emptyTitle}>No transactions yet</Text>
+      <Text style={styles.emptyTitle}>{t('noTransactionsYet')}</Text>
       <Text style={styles.emptySubtitle}>
-        Tap "Add Debt" to record the first transaction
+        {t('recordFirstTransaction')}
       </Text>
     </View>
   );
@@ -248,7 +255,7 @@ export function TransactionScreen() {
         <Pressable
           onPress={() => navigation.goBack()}
           style={styles.backButton}
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('cancel')}
           accessibilityRole="button"
         >
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
@@ -279,7 +286,7 @@ export function TransactionScreen() {
         <View style={styles.errorBanner}>
           <Text style={styles.errorText}>⚠️ {error}</Text>
           <Pressable onPress={refresh}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('retry')}</Text>
           </Pressable>
         </View>
       )}
@@ -326,7 +333,7 @@ export function TransactionScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background.primary,

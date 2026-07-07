@@ -41,12 +41,15 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { colors } from '../theme';
+import { useThemeContext, Colors } from '../theme';
+import { useShopProfile } from '../store/ShopProfileContext';
+import { useLanguage } from '../store/LanguageContext';
 import { Numpad } from './Numpad';
-import { toCents, formatKES } from '../utils/money';
+import { toCents, formatMoney } from '../utils/money';
 import { addTransaction } from '../repositories/transactions';
 import { db } from '../db';
 import { TransactionType } from '../types';
+import { playPaymentSound, isSoundEnabled } from '../utils/sound';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -67,6 +70,12 @@ export function AddTransactionModal({
   onSuccess,
   onClose,
 }: AddTransactionModalProps) {
+  const { colors } = useThemeContext();
+  const { profile } = useShopProfile();
+  const { t } = useLanguage();
+  const currency = profile?.currency || 'KES';
+  const styles = makeStyles(colors);
+
   // numpadValue is a string — see Numpad.tsx for why strings, not numbers
   const [numpadValue, setNumpadValue] = useState('');
   const [note, setNote] = useState('');
@@ -88,17 +97,17 @@ export function AddTransactionModal({
   // Display string for the hero amount: format whatever the user has typed
   // "KES 0.00" when empty, "KES 150.00" as they type
   const displayAmount = (() => {
-    if (numpadValue === '' || numpadValue === '0') return 'KES 0.00';
-    // While typing (e.g. "150."), show the raw input with KES prefix
+    if (numpadValue === '' || numpadValue === '0') return `${currency} 0.00`;
+    // While typing (e.g. "150."), show the raw input with currency prefix
     // so the user sees exactly what they've typed
-    if (numpadValue.endsWith('.')) return `KES ${numpadValue}`;
-    return formatKES(amountInCents);
+    if (numpadValue.endsWith('.')) return `${currency} ${numpadValue}`;
+    return formatMoney(amountInCents, currency);
   })();
 
   // ── Color logic ────────────────────────────────────────────────────────────
   const accentColor = type === 'debt' ? colors.debt : colors.payment;
-  const title = type === 'debt' ? 'Add Debt' : 'Record Payment';
-  const buttonLabel = type === 'debt' ? 'Record Debt' : 'Record Payment';
+  const title = type === 'debt' ? t('addDebt') : t('recordPayment');
+  const buttonLabel = type === 'debt' ? t('recordDebt') : t('recordPayment');
 
   // ── handleConfirm ──────────────────────────────────────────────────────────
   const handleConfirm = useCallback(async () => {
@@ -118,6 +127,14 @@ export function AddTransactionModal({
 
       // 1. Notify parent FIRST so the data refresh starts immediately
       onSuccess();
+
+      // Play sound for payments (not debts) if enabled
+      if (type === 'payment') {
+        const soundOn = await isSoundEnabled();
+        if (soundOn) {
+          await playPaymentSound();
+        }
+      }
 
       // 2. Reset our local state for next time the modal opens
       setNumpadValue('');
@@ -185,7 +202,7 @@ export function AddTransactionModal({
           {/* Note input */}
           <TextInput
             style={styles.noteInput}
-            placeholder="Add a note (optional) e.g. Unga, Sukari"
+            placeholder={t('placeholderNote')}
             placeholderTextColor={colors.text.muted}
             value={note}
             onChangeText={setNote}
@@ -222,7 +239,7 @@ export function AddTransactionModal({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',

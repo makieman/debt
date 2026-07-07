@@ -34,6 +34,20 @@ import { Text } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Numpad } from './Numpad';
 
+// Mock our custom ThemeContext since the numpad uses useThemeContext
+jest.mock('../theme', () => ({
+  useThemeContext: () => ({
+    colors: {
+      background: { primary: '#FFFFFF', secondary: '#F8FAFC', tertiary: '#E5E7EB' },
+      text: { primary: '#111827', secondary: '#4B5563', muted: '#9CA3AF' },
+      debt: '#EF4444',
+      payment: '#10B981',
+      white: '#FFFFFF',
+    },
+    themeMode: 'light',
+  }),
+}));
+
 interface WrapperProps {
   initialValue?: string;
   maxLength?: number;

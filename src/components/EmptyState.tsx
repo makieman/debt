@@ -20,7 +20,7 @@
 
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors } from "../theme";
+import { useThemeContext, Colors } from "../theme";
 
 // ─── Person Icon (pure RN views) ─────────────────────────────────────────────
 // Head: a circle (square View with borderRadius = width/2)
@@ -28,6 +28,8 @@ import { colors } from "../theme";
 // Outer ring: a large circle framing both shapes
 
 function PersonIcon() {
+  const { colors } = useThemeContext();
+  const iconStyles = makeIconStyles(colors);
   return (
     <View style={iconStyles.outerRing}>
       {/* Head */}
@@ -38,7 +40,7 @@ function PersonIcon() {
   );
 }
 
-const iconStyles = StyleSheet.create({
+const makeIconStyles = (colors: Colors) => StyleSheet.create({
   outerRing: {
     width: 88,
     height: 88,
@@ -72,6 +74,8 @@ const iconStyles = StyleSheet.create({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function EmptyState() {
+  const { colors } = useThemeContext();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.container}>
       <View style={styles.iconWrapper}>
@@ -91,7 +95,7 @@ export function EmptyState() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",

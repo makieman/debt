@@ -30,6 +30,29 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { CustomerCard } from './CustomerCard';
 import { Customer } from '../types';
 
+// Mock our custom ThemeContext since the card uses useThemeContext
+jest.mock('../theme', () => ({
+  useThemeContext: () => ({
+    colors: {
+      background: { primary: '#FFFFFF', secondary: '#F8FAFC', tertiary: '#E5E7EB' },
+      text: { primary: '#111827', secondary: '#4B5563', muted: '#9CA3AF' },
+      debt: '#EF4444',
+      payment: '#10B981',
+      white: '#FFFFFF',
+    },
+    themeMode: 'light',
+  }),
+}));
+
+// Mock our custom ShopProfileContext since the card uses useShopProfile
+jest.mock('../store/ShopProfileContext', () => ({
+  useShopProfile: () => ({
+    profile: {
+      currency: 'KES',
+    },
+  }),
+}));
+
 describe('CustomerCard Component', () => {
   let mockCustomer: Customer;
   let onPressMock: jest.Mock;
@@ -106,12 +129,12 @@ describe('CustomerCard Component', () => {
       // The card uses a local formatKES: return `KES ${amount.toLocaleString()}`
       // Since balance is passed in cents (or shillings? wait, the card expects balance, and
       // balance is passed down. In CustomerListScreen, is the balance in cents?
-      // Yes! But wait, does CustomerCard's local formatKES divide by 100?
+      // Yes! But wait, does CustomerCard's local formatMoney divide by 100?
       // Let's check CustomerCard.tsx local formatKES:
-      //   function formatKES(amount: number): string {
+      //   function formatMoney(amount: number): string {
       //     return `KES ${amount.toLocaleString()}`;
       //   }
-      // Oh! The local formatKES in CustomerCard.tsx does NOT divide by 100!
+      // Oh! The local formatMoney in CustomerCard.tsx does NOT divide by 100!
       // So passing 1500 gives "KES 1,500"
       expect(getByText('KES 1,500')).toBeTruthy();
       expect(getByText('owes')).toBeTruthy();

@@ -41,7 +41,8 @@ import {
   StyleSheet,
   TouchableWithoutFeedback,
 } from "react-native";
-import { colors } from "../theme";
+import { useThemeContext, Colors } from "../theme";
+import { useLanguage } from "../store/LanguageContext";
 import { addCustomer } from "../repositories/customers";
 import { db } from "../db";
 
@@ -56,6 +57,9 @@ interface AddCustomerModalProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerModalProps) {
+  const { colors } = useThemeContext();
+  const { t } = useLanguage();
+  const styles = makeStyles(colors);
   // ── Controlled input state ────────────────────────────────────────────────
   // Both inputs are controlled: value is always driven by state, never by the
   // TextInput's internal text. This is required in React Native.
@@ -102,7 +106,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
     const trimmedName = name.trim();
 
     if (!trimmedName) {
-      setNameError("Please enter a customer name");
+      setNameError(t('enterCustomerNameError'));
       return;
     }
 
@@ -116,7 +120,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
       onSuccess(); // tell the parent to refresh the customer list
       onClose();
     } catch (error) {
-      setNameError("Failed to save. Please try again.");
+      setNameError(t('failedToSaveError'));
       setSaving(false);
     }
   };
@@ -150,11 +154,11 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
           <View style={styles.dragHandle} />
 
           {/* ── Title ─────────────────────────────────────────────────────── */}
-          <Text style={styles.title}>New Customer</Text>
+          <Text style={styles.title}>{t('newCustomer')}</Text>
 
           {/* ── Name input ────────────────────────────────────────────────── */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Name *</Text>
+            <Text style={styles.label}>{t('nameRequired')}</Text>
             <TextInput
               ref={nameInputRef}
               style={[styles.input, nameError ? styles.inputError : null]}
@@ -163,7 +167,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
                 setName(text);
                 if (nameError) setNameError("");  // clear error as user types
               }}
-              placeholder="e.g. Kamau Wanjiku"
+              placeholder={t('placeholderName')}
               placeholderTextColor={colors.text.muted}
               returnKeyType="next"                // shows "Next" on keyboard instead of "Return"
               maxLength={80}
@@ -175,12 +179,12 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
 
           {/* ── Phone input ───────────────────────────────────────────────── */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Phone (optional)</Text>
+            <Text style={styles.label}>{t('phoneOptional')}</Text>
             <TextInput
               style={styles.input}
               value={phone}
               onChangeText={setPhone}
-              placeholder="e.g. 0712 345 678"
+              placeholder={t('placeholderPhone')}
               placeholderTextColor={colors.text.muted}
               keyboardType="phone-pad"           // numeric keyboard on mobile
               returnKeyType="done"
@@ -200,13 +204,13 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
             ]}
           >
             <Text style={styles.saveButtonText}>
-              {saving ? "Saving..." : "Save Customer"}
+              {saving ? t('saving') : t('saveCustomer')}
             </Text>
           </Pressable>
 
           {/* ── Cancel link ───────────────────────────────────────────────── */}
           <Pressable onPress={handleClose} style={styles.cancelButton}>
-            <Text style={styles.cancelText}>Cancel</Text>
+            <Text style={styles.cancelText}>{t('cancel')}</Text>
           </Pressable>
 
         </View>
@@ -217,7 +221,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   // ── Modal structure ────────────────────────────────────────────────────────
   backdrop: {
     position: "absolute",

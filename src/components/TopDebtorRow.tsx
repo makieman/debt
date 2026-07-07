@@ -24,9 +24,11 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { TopDebtor } from '../types';
-import { colors } from '../theme';
+import { useThemeContext, Colors } from '../theme';
+import { useShopProfile } from '../store/ShopProfileContext';
+import { useLanguage } from '../store/LanguageContext';
 import { getInitials } from '../utils/strings'; // DRY: same util as CustomerCard
-import { formatKES } from '../utils/money';
+import { formatMoney } from '../utils/money';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -39,6 +41,11 @@ interface TopDebtorRowProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function TopDebtorRow({ debtor, rank, onPress }: TopDebtorRowProps) {
+  const { colors } = useThemeContext();
+  const { profile } = useShopProfile();
+  const { t } = useLanguage();
+  const currency = profile?.currency || 'KES';
+  const styles = makeStyles(colors);
   const initials = getInitials(debtor.name);
   const isTopRank = rank === 1;
 
@@ -51,7 +58,7 @@ export function TopDebtorRow({ debtor, rank, onPress }: TopDebtorRowProps) {
         pressed && styles.rowPressed,
       ]}
       accessibilityRole="button"
-      accessibilityLabel={`${debtor.name}, rank ${rank}, owes ${formatKES(debtor.balance)}`}
+      accessibilityLabel={`${debtor.name}, rank ${rank}, ${t('owes')} ${formatMoney(debtor.balance, currency)}`}
     >
       {/* ── Rank number ─────────────────────────────────────────────────── */}
       {/* A small circle with the rank number. Rank 1 gets a teal tint. */}
@@ -70,12 +77,12 @@ export function TopDebtorRow({ debtor, rank, onPress }: TopDebtorRowProps) {
       {/* ── Name + "owes" label ─────────────────────────────────────────── */}
       <View style={styles.nameContainer}>
         <Text style={styles.name} numberOfLines={1}>{debtor.name}</Text>
-        <Text style={styles.owesLabel}>owes</Text>
+        <Text style={styles.owesLabel}>{t('owes')}</Text>
       </View>
 
       {/* ── Balance (right-aligned) ──────────────────────────────────────── */}
       <Text style={styles.balance} numberOfLines={1}>
-        {formatKES(debtor.balance)}
+        {formatMoney(debtor.balance, currency)}
       </Text>
     </Pressable>
   );
@@ -83,7 +90,7 @@ export function TopDebtorRow({ debtor, rank, onPress }: TopDebtorRowProps) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -62,3 +62,38 @@ export function getInitials(name: string | null | undefined): string {
 
   return first + second;
 }
+
+/**
+ * Converts a string into a URL/filename-safe "slug".
+ *
+ * WHY SLUGIFY FOR FILENAMES?
+ * Spaces in filenames are encoded as %20 or stripped entirely by WhatsApp,
+ * Gmail, and some file systems. Special characters like !, @, # break certain
+ * parsers. A slug is always safe, always readable:
+ *   "Duka ya Kamau!"  → "duka-ya-kamau"
+ *   "  spaces  "      → "spaces"
+ *   ""                → "export"   (fallback — never an empty filename)
+ *
+ * Algorithm:
+ *   1. Lowercase the entire string
+ *   2. Trim leading/trailing whitespace
+ *   3. Replace whitespace runs with a single hyphen
+ *   4. Remove all characters that are not a-z, 0-9, or hyphen
+ *   5. Collapse multiple hyphens into one
+ *   6. Strip leading/trailing hyphens
+ *   7. Fall back to "export" if the result is empty
+ *
+ * @param text - Any user-provided or computed string (shop name, etc.)
+ * @returns    - A lowercase, hyphenated, filesystem-safe slug
+ */
+export function slugify(text: string): string {
+  const result = text
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')           // spaces → hyphens
+    .replace(/[^a-z0-9-]/g, '')     // remove non-alphanum except hyphens
+    .replace(/-+/g, '-')            // collapse multiple hyphens
+    .replace(/^-+|-+$/g, '');       // strip leading/trailing hyphens
+
+  return result || 'export';
+}

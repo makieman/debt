@@ -64,8 +64,8 @@ import React from 'react';
 import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { CartesianChart, Bar } from 'victory-native';
 import { DailyTotal } from '../types';
-import { colors } from '../theme';
-import { formatKESShort } from '../utils/money';
+import { useThemeContext, Colors } from '../theme';
+import { formatMoneyShort } from '../utils/money';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -95,6 +95,8 @@ function dayLabel(dateStr: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function WeeklyChart({ data }: WeeklyChartProps) {
+  const { colors } = useThemeContext();
+  const styles = makeStyles(colors);
   const { width } = useWindowDimensions();
   const chartWidth = width - 40; // 20px padding each side
 
@@ -154,7 +156,7 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   container: {
     height: 180,
     // width set dynamically from useWindowDimensions

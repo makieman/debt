@@ -23,7 +23,7 @@
  *
  * RULE OF THUMB:
  *   Input from user (string) → toCents() → store in DB
- *   Read from DB (cents)     → toShillings() / formatKES() → display
+ *   Read from DB (cents)     → toShillings() / formatMoney() → display
  */
 
 // ─── Conversion ───────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ export function toCents(shillings: number): number {
  * Converts integer cents from the database back to shillings for arithmetic.
  *
  * Use this only when you need a numeric shilling value for calculations
- * (rare). For display, use formatKES() directly.
+ * (rare). For display, use formatMoney() directly.
  *
  * Example:
  *   toShillings(15000)  → 150
@@ -75,19 +75,19 @@ export function toShillings(cents: number): number {
  * consistent output regardless of the phone's language setting.
  *
  * Examples:
- *   formatKES(15000)   → "KES 150.00"
- *   formatKES(150050)  → "KES 1,500.50"
- *   formatKES(0)       → "KES 0.00"
- *   formatKES(7550)    → "KES 75.50"
- *   formatKES(-10000)  → "KES -100.00"  (for overpayment display)
+ *   formatMoney(15000)   → "KES 150.00"
+ *   formatMoney(150050)  → "KES 1,500.50"
+ *   formatMoney(0)       → "KES 0.00"
+ *   formatMoney(7550)    → "KES 75.50"
+ *   formatMoney(-10000)  → "KES -100.00"  (for overpayment display)
  */
-export function formatKES(cents: number): string {
+export function formatMoney(cents: number, currency: string = 'KES'): string {
   const shillings = cents / 100;
   const formatted = shillings.toLocaleString('en-KE', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  return `KES ${formatted}`;
+  return `${currency} ${formatted}`;
 }
 
 // ─── Compact Formatter (for chart labels) ────────────────────────────────────
@@ -116,32 +116,32 @@ export function formatKES(cents: number): string {
  * We threshold in CENTS but the display is in SHILLINGS.
  *
  * Examples:
- *   formatKESShort(0)       → "0"
- *   formatKESShort(50000)   → "500"    (KES 500)
- *   formatKESShort(120000)  → "1.2K"   (KES 1,200)
- *   formatKESShort(9950000) → "99.5K"  (KES 99,500)
- *   formatKESShort(1000000) → "10K+"   (KES 10,000 and above ... shown as 10K+)
+ *   formatMoneyShort(0)       → "0"
+ *   formatMoneyShort(50000)   → "500"    (KES 500)
+ *   formatMoneyShort(120000)  → "1.2K"   (KES 1,200)
+ *   formatMoneyShort(9950000) → "99.5K"  (KES 99,500)
+ *   formatMoneyShort(1000000) → "10K+"   (KES 10,000 and above ... shown as 10K+)
  */
-export function formatKESShort(cents: number): string {
+export function formatMoneyShort(cents: number): string {
   if (cents < 1000) {
-    // Less than KES 10 — not meaningful to display on a bar chart
+    // Less than 10 — not meaningful to display on a bar chart
     return '0';
   }
 
   const shillings = cents / 100;
 
   if (cents < 100_000) {
-    // KES 10 – KES 999: show whole shillings (no decimal noise)
+    // 10 – 999: show whole shillings (no decimal noise)
     return String(Math.round(shillings));
   }
 
   if (cents < 10_000_000) {
-    // KES 1,000 – KES 99,999: show as "1.0K" – "99.9K"
+    // 1,000 – 99,999: show as "1.0K" – "99.9K"
     const k = shillings / 1000;
     return `${k.toFixed(1)}K`;
   }
 
-  // KES 100,000 and above: just show "100K+"
+  // 100,000 and above: just show "100K+"
   return '100K+';
 }
 

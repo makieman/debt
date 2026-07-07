@@ -41,7 +41,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../theme';
+import { useThemeContext, Colors } from '../theme';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -59,9 +59,13 @@ export function StatCard({
   label,
   value,
   sublabel,
-  color = colors.text.primary,
+  color,
   icon,
 }: StatCardProps) {
+  const { colors } = useThemeContext();
+  const styles = makeStyles(colors);
+  const valueColor = color || colors.text.primary;
+
   return (
     <View style={styles.card}>
       {/* ── Top row: label + icon ──────────────────────────────────────────── */}
@@ -73,7 +77,7 @@ export function StatCard({
       {/* ── Value ─────────────────────────────────────────────────────────── */}
       {/* color prop overrides the default text color — debt amounts are red, */}
       {/* customer counts are teal, etc.                                       */}
-      <Text style={[styles.value, { color }]} numberOfLines={1} adjustsFontSizeToFit>
+      <Text style={[styles.value, { color: valueColor }]} numberOfLines={1} adjustsFontSizeToFit>
         {value}
       </Text>
 
@@ -89,7 +93,7 @@ export function StatCard({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   card: {
     backgroundColor: colors.background.secondary,
     borderRadius: 20,            // rounded-2xl equivalent

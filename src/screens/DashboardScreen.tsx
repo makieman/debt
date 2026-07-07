@@ -26,8 +26,10 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useDashboard } from '../hooks/useDashboard';
-import { colors } from '../theme';
-import { formatKES } from '../utils/money';
+import { useThemeContext, Colors } from '../theme';
+import { useShopProfile } from '../store/ShopProfileContext';
+import { useLanguage } from '../store/LanguageContext';
+import { formatMoney } from '../utils/money';
 import { ActivityFeedRow } from '../components/ActivityFeedRow';
 import { AddCustomerModal } from '../components/AddCustomerModal';
 import { RootTabParamList } from '../navigation/types';
@@ -37,6 +39,12 @@ type DashboardNavProp = BottomTabNavigationProp<RootTabParamList, 'Dashboard'>;
 export function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<DashboardNavProp>();
+  const { colors, themeMode } = useThemeContext();
+  const { profile } = useShopProfile();
+  const { t } = useLanguage();
+  const currency = profile?.currency || 'KES';
+  const styles = makeStyles(colors);
+
   const {
     totalOutstanding,
     totalReceivables,
@@ -48,6 +56,18 @@ export function DashboardScreen() {
     refresh,
   } = useDashboard();
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return t('goodMorning');
+    if (hour < 17) return t('goodAfternoon');
+    return t('goodEvening');
+  };
+
+  const ownerFirstName = profile?.ownerName
+    ? profile.ownerName.trim().split(' ')[0]
+    : 'Owner';
+  const capitalizedName = ownerFirstName.charAt(0).toUpperCase() + ownerFirstName.slice(1);
+
   // ── States ─────────────────────────────────────────────────────────────────
   const [modalVisible, setModalVisible] = useState(false);
   const [showValues, setShowValues] = useState(true);
@@ -57,10 +77,10 @@ export function DashboardScreen() {
     return (
       <View style={[styles.errorContainer, { paddingTop: insets.top }]}>
         <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorTitle}>Couldn't load dashboard</Text>
+        <Text style={styles.errorTitle}>{t('couldNotLoadDashboard')}</Text>
         <Text style={styles.errorMsg}>{error}</Text>
         <Pressable onPress={refresh} style={styles.retryBtn}>
-          <Text style={styles.retryText}>Try again</Text>
+          <Text style={styles.retryText}>{t('retry')}</Text>
         </Pressable>
       </View>
     );
@@ -69,7 +89,10 @@ export function DashboardScreen() {
   // ── Main screen ────────────────────────────────────────────────────────────
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background.primary} />
+      <StatusBar
+        barStyle={themeMode === 'light' ? 'dark-content' : 'light-content'}
+        backgroundColor={colors.background.primary}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -89,8 +112,8 @@ export function DashboardScreen() {
             <Ionicons name="menu-outline" size={24} color={colors.text.primary} />
           </Pressable>
           <View style={styles.headerTitleContainer}>
-            <Text style={styles.greeting}>Good morning, Alex 👋</Text>
-            <Text style={styles.greetingSub}>Here's your business overview</Text>
+            <Text style={styles.greeting}>{getGreeting()}, {capitalizedName} 👋</Text>
+            <Text style={styles.greetingSub}>{t('businessOverview')}</Text>
           </View>
           <Pressable style={styles.iconButton}>
             <Ionicons name="notifications-outline" size={24} color={colors.text.primary} />
@@ -102,7 +125,7 @@ export function DashboardScreen() {
           {/* Green Part */}
           <View style={styles.receivablesGreenPart}>
             <View style={styles.receivablesHeader}>
-              <Text style={styles.receivablesLabel}>Total Receivables</Text>
+              <Text style={styles.receivablesLabel}>{t('totalReceivables')}</Text>
               <Pressable
                 onPress={() => setShowValues(!showValues)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -115,26 +138,28 @@ export function DashboardScreen() {
               </Pressable>
             </View>
             <Text style={styles.receivablesAmount}>
-              {showValues ? formatKES(totalReceivables) : '••••••'}
+              {showValues ? formatMoney(totalReceivables, currency) : '••••••'}
             </Text>
             <Text style={styles.receivablesCustomers}>
-              from {customerCount} customer{customerCount !== 1 ? 's' : ''}
+              {profile?.language === 'sw' 
+                ? `${t('from')} ${t('customersPlural')} ${customerCount}` 
+                : `${t('from')} ${customerCount} ${customerCount === 1 ? t('customer') : t('customersPlural')}`}
             </Text>
           </View>
 
           {/* Sub Details (Amount Collected & Outstanding) */}
           <View style={styles.receivablesSubDetails}>
             <View style={styles.subDetailCol}>
-              <Text style={styles.subDetailLabel}>Amount Collected</Text>
+              <Text style={styles.subDetailLabel}>{t('amountCollected')}</Text>
               <Text style={[styles.subDetailValue, { color: colors.accent.teal }]}>
-                {showValues ? formatKES(totalCollected) : '••••••'}
+                {showValues ? formatMoney(totalCollected, currency) : '••••••'}
               </Text>
             </View>
             <View style={styles.subDetailDivider} />
             <View style={styles.subDetailCol}>
-              <Text style={styles.subDetailLabel}>Outstanding</Text>
+              <Text style={styles.subDetailLabel}>{t('outstanding')}</Text>
               <Text style={[styles.subDetailValue, { color: colors.debt }]}>
-                {showValues ? formatKES(totalOutstanding) : '••••••'}
+                {showValues ? formatMoney(totalOutstanding, currency) : '••••••'}
               </Text>
             </View>
           </View>
@@ -142,7 +167,7 @@ export function DashboardScreen() {
 
         {/* ── Quick Actions Section ───────────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>{t('quickActions')}</Text>
           <View style={styles.quickActionsRow}>
             {/* Add Credit */}
             <Pressable
@@ -157,8 +182,8 @@ export function DashboardScreen() {
               <View style={[styles.actionIconContainer, { backgroundColor: '#EF444412' }]}>
                 <Ionicons name="document-text-outline" size={22} color={colors.debt} />
               </View>
-              <Text style={styles.actionCardTitle}>Add Credit</Text>
-              <Text style={styles.actionCardSubtitle}>Give credit</Text>
+              <Text style={styles.actionCardTitle}>{t('addCredit')}</Text>
+              <Text style={styles.actionCardSubtitle}>{t('giveCredit')}</Text>
             </Pressable>
 
             {/* Record Payment */}
@@ -174,8 +199,8 @@ export function DashboardScreen() {
               <View style={[styles.actionIconContainer, { backgroundColor: '#10B98112' }]}>
                 <Ionicons name="cash-outline" size={22} color={colors.accent.teal} />
               </View>
-              <Text style={styles.actionCardTitle}>Record Payment</Text>
-              <Text style={styles.actionCardSubtitle}>Receive payment</Text>
+              <Text style={styles.actionCardTitle}>{t('recordPayment')}</Text>
+              <Text style={styles.actionCardSubtitle}>{t('receivePayment')}</Text>
             </Pressable>
 
             {/* Add Customer */}
@@ -191,8 +216,8 @@ export function DashboardScreen() {
               <View style={[styles.actionIconContainer, { backgroundColor: '#3B82F612' }]}>
                 <Ionicons name="person-add-outline" size={22} color="#3B82F6" />
               </View>
-              <Text style={styles.actionCardTitle}>Add Customer</Text>
-              <Text style={styles.actionCardSubtitle}>New customer</Text>
+              <Text style={styles.actionCardTitle}>{t('addCustomer')}</Text>
+              <Text style={styles.actionCardSubtitle}>{t('newCustomerSubtitle')}</Text>
             </Pressable>
           </View>
         </View>
@@ -200,15 +225,15 @@ export function DashboardScreen() {
         {/* ── Recent Transactions Section ─────────────────────────────────── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+            <Text style={styles.sectionTitle}>{t('recentTransactions')}</Text>
             <Pressable onPress={() => navigation.navigate('Customers')}>
-              <Text style={styles.viewAllText}>View all</Text>
+              <Text style={styles.viewAllText}>{t('viewAll')}</Text>
             </Pressable>
           </View>
 
           {recentActivity.length === 0 ? (
             <View style={styles.emptySection}>
-              <Text style={styles.emptyText}>No transactions yet</Text>
+              <Text style={styles.emptyText}>{t('noTransactionsYet')}</Text>
             </View>
           ) : (
             <View style={styles.activityContainer}>
@@ -243,7 +268,7 @@ export function DashboardScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background.primary,

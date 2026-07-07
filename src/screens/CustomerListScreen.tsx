@@ -20,7 +20,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../theme";
+import { useThemeContext, Colors } from "../theme";
+import { useShopProfile } from "../store/ShopProfileContext";
+import { useLanguage } from "../store/LanguageContext";
+import { formatMoney } from "../utils/money";
 import { useCustomers } from "../hooks/useCustomers";
 import { CustomerCard } from "../components/CustomerCard";
 import { EmptyState } from "../components/EmptyState";
@@ -28,13 +31,12 @@ import { AddCustomerModal } from "../components/AddCustomerModal";
 import { CustomerListNavProp } from "../navigation/types";
 import { CustomerWithBalance } from "../types";
 
-// Helper to format KES amount
-function formatKES(amount: number): string {
-  const shillings = amount / 100;
-  return `KES ${shillings.toLocaleString()}`;
-}
-
 export function CustomerListScreen() {
+  const { colors, themeMode } = useThemeContext();
+  const { profile } = useShopProfile();
+  const { t } = useLanguage();
+  const currency = profile?.currency || 'KES';
+  const styles = makeStyles(colors);
   const { customers, totalOwed, totalPaid, loading, error, refresh } = useCustomers();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<CustomerListNavProp>();
@@ -85,7 +87,7 @@ export function CustomerListScreen() {
     return (
       <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={colors.accent.teal} />
-        <Text style={styles.loadingText}>Loading customers...</Text>
+        <Text style={styles.loadingText}>{t('loadingCustomers')}</Text>
       </View>
     );
   }
@@ -94,10 +96,10 @@ export function CustomerListScreen() {
   if (error) {
     return (
       <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <Text style={styles.errorText}>⚠️ Failed to load customers</Text>
+        <Text style={styles.errorText}>⚠️ {t('failedToLoadCustomers')}</Text>
         <Text style={styles.errorSubtext}>{error.message}</Text>
         <Pressable onPress={refresh} style={styles.retryButton}>
-          <Text style={styles.retryText}>Tap to retry</Text>
+          <Text style={styles.retryText}>{t('tapToRetry')}</Text>
         </Pressable>
       </View>
     );
@@ -106,11 +108,14 @@ export function CustomerListScreen() {
   // ── Render: main screen ───────────────────────────────────────────────────
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background.primary} />
+      <StatusBar
+        barStyle={themeMode === 'light' ? 'dark-content' : 'light-content'}
+        backgroundColor={colors.background.primary}
+      />
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <View style={styles.header}>
-        <Text style={styles.title}>Customers</Text>
+        <Text style={styles.title}>{t('customers')}</Text>
       </View>
 
       {/* ── Search & Filter Bar ─────────────────────────────────────────────── */}
@@ -121,7 +126,7 @@ export function CustomerListScreen() {
             style={styles.searchInput}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search customers..."
+            placeholder={t('searchPlaceholder')}
             placeholderTextColor={colors.text.muted}
             returnKeyType="search"
             clearButtonMode="while-editing"
@@ -155,7 +160,7 @@ export function CustomerListScreen() {
             style={[styles.filterChip, filterMode === "all" && styles.filterChipActive]}
           >
             <Text style={[styles.filterChipText, filterMode === "all" && styles.filterChipTextActive]}>
-              All ({customers.length})
+              {t('all')} ({customers.length})
             </Text>
           </Pressable>
           <Pressable
@@ -163,7 +168,7 @@ export function CustomerListScreen() {
             style={[styles.filterChip, filterMode === "owes" && styles.filterChipActive]}
           >
             <Text style={[styles.filterChipText, filterMode === "owes" && styles.filterChipTextActive]}>
-              Owes ({customers.filter((c) => c.balance > 0).length})
+              {t('owesChip')} ({customers.filter((c) => c.balance > 0).length})
             </Text>
           </Pressable>
           <Pressable
@@ -171,7 +176,7 @@ export function CustomerListScreen() {
             style={[styles.filterChip, filterMode === "settled" && styles.filterChipActive]}
           >
             <Text style={[styles.filterChipText, filterMode === "settled" && styles.filterChipTextActive]}>
-              Settled ({customers.filter((c) => c.balance <= 0).length})
+              {t('settledChip')} ({customers.filter((c) => c.balance <= 0).length})
             </Text>
           </Pressable>
         </View>
@@ -187,7 +192,7 @@ export function CustomerListScreen() {
             pressed && styles.statCardPressed,
           ]}
         >
-          <Text style={styles.statLabel}>Total Customers</Text>
+          <Text style={styles.statLabel}>{t('totalCustomers')}</Text>
           <Text style={styles.statValueDark}>{customers.length}</Text>
         </Pressable>
 
@@ -199,8 +204,8 @@ export function CustomerListScreen() {
             pressed && styles.statCardPressed,
           ]}
         >
-          <Text style={styles.statLabel}>Total Owed</Text>
-          <Text style={styles.statValueRed}>{formatKES(totalOwed)}</Text>
+          <Text style={styles.statLabel}>{t('totalOwed')}</Text>
+          <Text style={styles.statValueRed}>{formatMoney(totalOwed, currency)}</Text>
         </Pressable>
 
         <Pressable
@@ -211,8 +216,8 @@ export function CustomerListScreen() {
             pressed && styles.statCardPressed,
           ]}
         >
-          <Text style={styles.statLabel}>Total Paid</Text>
-          <Text style={styles.statValueGreen}>{formatKES(totalPaid)}</Text>
+          <Text style={styles.statLabel}>{t('totalPaid')}</Text>
+          <Text style={styles.statValueGreen}>{formatMoney(totalPaid, currency)}</Text>
         </Pressable>
       </View>
 
@@ -232,7 +237,7 @@ export function CustomerListScreen() {
           searchQuery || filterMode !== "all" ? (
             <View style={styles.noResultsContainer}>
               <Text style={styles.noResultsText}>
-                No matching customers found.
+                {t('noMatchingCustomers')}
               </Text>
             </View>
           ) : (
@@ -273,7 +278,7 @@ export function CustomerListScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,

@@ -22,7 +22,7 @@
  * Example: expect({x: 1}).toEqual({x: 1}) passes, but expect({x: 1}).toBe({x: 1}) fails because they are different object references.
  */
 
-import { toCents, toShillings, formatKES, formatKESShort } from './money';
+import { toCents, toShillings, formatMoney, formatMoneyShort } from './money';
 
 describe('Money Utilities', () => {
 
@@ -71,21 +71,29 @@ describe('Money Utilities', () => {
     });
   });
 
-  describe('formatKES()', () => {
+  describe('formatMoney()', () => {
     it('should format positive cent amounts with KES prefix and two decimal places', () => {
       // 15,000 cents (150.00 KES)
-      expect(formatKES(15000)).toBe('KES 150.00');
+      expect(formatMoney(15000)).toBe('KES 150.00');
 
       // 0 cents
-      expect(formatKES(0)).toBe('KES 0.00');
+      expect(formatMoney(0)).toBe('KES 0.00');
+    });
+
+    it('should support formatting with custom currencies (e.g. USD, TZS)', () => {
+      // Custom positive currency
+      expect(formatMoney(15000, 'USD')).toBe('USD 150.00');
+      
+      // Custom negative currency
+      expect(formatMoney(-5000, 'TZS')).toBe('TZS -50.00');
     });
 
     it('should add comma separators for thousands', () => {
       // 100,000 cents (1,000.00 KES)
-      expect(formatKES(100000)).toBe('KES 1,000.00');
+      expect(formatMoney(100000)).toBe('KES 1,000.00');
 
       // 999,999,999 cents (9,999,999.99 KES)
-      expect(formatKES(999999999)).toBe('KES 9,999,999.99');
+      expect(formatMoney(999999999)).toBe('KES 9,999,999.99');
     });
 
     it('should format negative cent amounts correctly representing credit/overpayment', () => {
@@ -95,32 +103,32 @@ describe('Money Utilities', () => {
        * We display this by showing the minus sign before the shilling number (e.g. "KES -50.00").
        * This is handled natively by toLocaleString.
        */
-      expect(formatKES(-5000)).toBe('KES -50.00');
+      expect(formatMoney(-5000)).toBe('KES -50.00');
     });
   });
 
-  describe('formatKESShort()', () => {
+  describe('formatMoneyShort()', () => {
     it('should return "0" for amounts less than 1,000 cents (10 KES)', () => {
-      expect(formatKESShort(0)).toBe('0');
-      expect(formatKESShort(500)).toBe('0');
+      expect(formatMoneyShort(0)).toBe('0');
+      expect(formatMoneyShort(500)).toBe('0');
     });
 
     it('should display whole shillings without decimal places for amounts between KES 10 and KES 999', () => {
       // 50,000 cents = 500 shillings
-      expect(formatKESShort(50000)).toBe('500');
+      expect(formatMoneyShort(50000)).toBe('500');
     });
 
     it('should display compact suffix K with 1 decimal place for amounts between KES 1,000 and KES 99,999', () => {
       // 100,000 cents = 1,000 shillings -> "1.0K"
-      expect(formatKESShort(100000)).toBe('1.0K');
+      expect(formatMoneyShort(100000)).toBe('1.0K');
 
       // 1,500,000 cents = 15,000 shillings -> "15.0K"
-      expect(formatKESShort(1500000)).toBe('15.0K');
+      expect(formatMoneyShort(1500000)).toBe('15.0K');
     });
 
     it('should cap the display at "100K+" for KES 100,000 (10,000,000 cents) and above', () => {
       // 10,000,000 cents = 100,000 shillings -> "100K+"
-      expect(formatKESShort(10000000)).toBe('100K+');
+      expect(formatMoneyShort(10000000)).toBe('100K+');
     });
   });
 });
@@ -134,7 +142,7 @@ describe('Money Utilities', () => {
  *    would fail if the thresholds are mixed up.
  *
  * PASSING FOR THE WRONG REASON VS. GENUINE CORRECTNESS:
- * - A test passing for the "wrong reason" might occur if we hardcoded `formatKES(15000)` to return `'KES 150.00'`.
+ * - A test passing for the "wrong reason" might occur if we hardcoded `formatMoney(15000)` to return `'KES 150.00'`.
  *   The test passes, but the implementation is broken for any other number.
  * - Genuine correctness is proved by writing multiple assertions covering edges (0, positive, negative, threshold limits)
  *   and verifying that the logic handles arbitrary inputs dynamically and correctly.

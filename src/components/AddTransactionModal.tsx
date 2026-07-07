@@ -268,11 +268,11 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     textAlign: 'center',
   },
   amountDisplay: {
-    fontSize: 40,
+    fontSize: 48,
     fontWeight: '700',
     textAlign: 'center',
     letterSpacing: 1,
-    minHeight: 52,   // prevents layout shift when value changes length
+    minHeight: 64,   // prevents layout shift when value changes length
   },
   noteInput: {
     backgroundColor: colors.background.primary,

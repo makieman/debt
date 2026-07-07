@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Duka Deni",
-    "slug": "duka-deni",
+    "name": "Credi",
+    "slug": "credi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -19,7 +19,7 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundColor": "#0F1117"
       },
-      "package": "com.lightstorm.dukadeni",
+      "package": "com.lightstorm.credi",
       "versionCode": 1,
       "permissions": []
     },
@@ -28,7 +28,14 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Credi to use Face ID."
+        }
+      ]
     ],
     "extra": {
       "eas": {

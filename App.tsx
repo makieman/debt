@@ -1,5 +1,5 @@
 /**
- * App.tsx — DAY 6 BUILD
+ * App.tsx — SESSION 4 BUILD
  *
  * RESPONSIBILITIES:
  *   1. Import global.css (MUST be first — initialises NativeWind)
@@ -74,12 +74,13 @@ import { StatusBar } from "expo-status-bar";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { db, runMigrations } from "./src/db";
-import { seedDemoData } from "./src/db/seed";
-import { RootTabs } from "./src/navigation";
 import { colors } from "./src/theme";
 import { ShopProfileProvider } from "./src/store/ShopProfileContext";
 import { LanguageProvider } from "./src/store/LanguageContext";
 import { ThemeProvider } from "./src/theme/ThemeContext";
+import { SecurityProvider, useSecurityContext } from "./src/store/SecurityContext";
+import { PinScreen } from "./src/screens/PinScreen";
+import { RootStack } from "./src/navigation/RootStack";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -95,7 +96,36 @@ const FIRST_LAUNCH_KEY = "hasLaunched_v1";
 //                                       this to 'hasLaunched_v2' — the old key
 //                                       is ignored automatically.
 
+// ─── AppGate ─────────────────────────────────────────────────────────────────
+//
+// Inner component rendered inside NavigationContainer.
+// It reads from SecurityContext (which lives above NavigationContainer)
+// and decides whether to show the PIN lock screen or the main app.
+//
+// WHY REPLACE THE TREE vs AN OVERLAY?
+// If PinScreen were position:absolute over everything, the screens below
+// would still be mounted and processing data — background queries, timers,
+// re-renders would all continue. By conditionally rendering either PinScreen
+// OR RootStack (not both), we guarantee nothing is mounted while locked.
+//
+// WHY CHECK pinSetupComplete BEFORE LOCKING?
+// If the user enabled app lock but the app crashed before the PIN hash was
+// saved to SecureStore, we must not permanently lock them out. If no hash
+// exists, we can't verify any PIN — so we allow entry without locking.
+
+function AppGate() {
+  const { isLocked, isAppLockEnabled, pinSetupComplete, unlockApp } =
+    useSecurityContext();
+
+  if (isLocked && isAppLockEnabled && pinSetupComplete) {
+    return <PinScreen mode="unlock" onSuccess={unlockApp} />;
+  }
+
+  return <RootStack />;
+}
+
 // ─── App Component ────────────────────────────────────────────────────────────
+
 
 export default function App() {
   const [bootState, setBootState] = useState<BootState>("pending");
@@ -113,22 +143,10 @@ export default function App() {
         // exist yet. Safe to run every launch — uses CREATE TABLE IF NOT EXISTS.
         await runMigrations(db);
 
-        // Step 2: Check if this is the very first launch.
-        //
-        // AsyncStorage.getItem returns null if the key has never been set.
-        // We use this to detect: has the app ever been opened before?
+        // Step 2: Mark first launch if needed
         const hasLaunched = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
-
         if (!hasLaunched) {
-          // First time ever. Seed demo data so the dashboard is populated.
-          console.log("[App] First launch detected — seeding demo data");
-          await seedDemoData(db);
-
-          // Mark this launch so we never auto-seed again.
           await AsyncStorage.setItem(FIRST_LAUNCH_KEY, "true");
-          console.log("[App] First launch flag set");
-        } else {
-          console.log("[App] Returning user — skipping seed");
         }
 
         setBootState("done");
@@ -150,7 +168,7 @@ export default function App() {
         <View style={styles.centeredScreen}>
           <StatusBar style="dark" />
           <ActivityIndicator size="large" color={colors.accent.teal} />
-          <Text style={styles.loadingLabel}>Starting Duka Deni...</Text>
+          <Text style={styles.loadingLabel}>Starting Credi...</Text>
         </View>
       </SafeAreaProvider>
     );
@@ -182,27 +200,29 @@ export default function App() {
     );
   }
 
-  // ── Main app — React Navigation wired up ────────────────────────────────────
+  // ── Main app — React Navigation wired up ────────────────────────────────
   //
-  // NavigationContainer is the REQUIRED root wrapper for React Navigation.
-  // Everything that uses useNavigation() or useRoute() must be a descendant
-  // of this component. Rendering it here (at the top level, after migrations
-  // are confirmed complete) ensures the DB is ready before any screen mounts.
+  // SecurityProvider wraps the entire tree so PinScreen can replace EVERYTHING
+  // (including NavigationContainer) when the app is locked. If SecurityProvider
+  // were inside NavigationContainer, the tab bar would still render behind the
+  // lock screen.
   //
-  // RootTabs renders the bottom tab navigator with 3 tabs:
-  //   📊 Dashboard | 👥 Customers | ⚙️ Settings
+  // RootStack wraps RootTabs and adds PinSetupScreen + PinChangeScreen as
+  // full-screen modal screens reachable from anywhere in the app.
   return (
     <ShopProfileProvider>
-      <LanguageProvider>
-        <ThemeProvider>
-          <SafeAreaProvider>
-            <StatusBar style="dark" />
-            <NavigationContainer>
-              <RootTabs />
-            </NavigationContainer>
-          </SafeAreaProvider>
-        </ThemeProvider>
-      </LanguageProvider>
+      <SecurityProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            <SafeAreaProvider>
+              <StatusBar style="dark" />
+              <NavigationContainer>
+                <AppGate />
+              </NavigationContainer>
+            </SafeAreaProvider>
+          </ThemeProvider>
+        </LanguageProvider>
+      </SecurityProvider>
     </ShopProfileProvider>
   );
 }

@@ -69,6 +69,20 @@ export type RootTabParamList = {
   Settings: undefined;
 };
 
+// ─── Root Stack (above the tab navigator) ─────────────────────────────────────
+//
+// PIN setup and change are app-level flows — they can be triggered from
+// the Settings tab but should render full-screen, covering the tab bar.
+// Adding them here (above RootTabs) means they're reachable from any tab
+// and the tab bar disappears completely (fullScreenModal presentation).
+
+export type RootStackParamList = {
+  Main: undefined;       // → RootTabs (the tab navigator)
+  PinSetup: undefined;   // → PinSetupScreen (full screen modal)
+  PinChange: undefined;  // → PinChangeScreen (full screen modal)
+};
+
+
 // ─── Typed Navigation Props ───────────────────────────────────────────────────
 //
 // These convenience types are what you pass to useNavigation<T>().

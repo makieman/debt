@@ -28,7 +28,7 @@ export const translations = {
     notificationSound: "Sound",
     notificationSoundSubtitle: "Play sounds for actions",
     // App general
-    dukaDeni: 'Duka Deni',
+    dukaDeni: 'Credi',
 
     // Dashboard & Stats
     goodMorning: 'Good morning',
@@ -119,6 +119,44 @@ export const translations = {
     typeToConfirm: 'Type DELETE to confirm',
     deletePlaceholder: 'DELETE',
     dataCleared: 'All data cleared',
+
+    // Security & PIN
+    appLock: 'App lock',
+    appLockEnabled: 'PIN required to open app',
+    appLockDisabled: 'Use PIN or biometrics',
+    changePIN: 'Change PIN',
+    changePINSubtitle: 'Update your 4-digit PIN',
+    disableAppLock: 'Disable app lock?',
+    disableAppLockMsg: 'Your PIN will be saved. You can re-enable lock without setting a new PIN.',
+    disable: 'Disable',
+    enterPIN: 'Enter PIN',
+    createPIN: 'Create PIN',
+    confirmPIN: 'Confirm PIN',
+    enterCurrentPIN: 'Enter current PIN',
+    enterNewPIN: 'Enter new PIN',
+    confirmNewPIN: 'Confirm new PIN',
+    enterYourPIN: 'Enter your 4-digit PIN',
+    chooseAPIN: 'Choose a 4-digit PIN',
+    enterPINAgain: 'Enter PIN again to confirm',
+    verifyIdentity: 'Verify your identity',
+    incorrectPIN: 'Incorrect PIN',
+    /**
+     * WHY A FUNCTION, NOT A STRING?
+     * attemptsRemaining takes a number parameter: "3 attempts remaining".
+     * A plain string can't embed a runtime value — you'd need template literals.
+     * Making it a function (like greeting() from Session 1) keeps the call site
+     * clean: t('attemptsRemaining')(3) → "3 attempts remaining".
+     * The singular/plural handling (attempt vs attempts) also lives here,
+     * not scattered across the UI code.
+     */
+    attemptsRemaining: (n: number) => `${n} attempt${n === 1 ? '' : 's'} remaining`,
+    tooManyAttempts: 'Too many attempts',
+    /** Same reason as attemptsRemaining — embeds countdown seconds. */
+    tryAgainIn: (s: number) => `Try again in ${s}s`,
+    pinsDontMatch: 'PINs do not match. Try again.',
+    pinChanged: 'PIN changed successfully',
+    unlockDukaDeni: 'Unlock Credi',
+    usePIN: 'Use PIN',
   },
   sw: {
     // Settings
@@ -149,7 +187,7 @@ export const translations = {
     notificationSound: "Sauti",
     notificationSoundSubtitle: "Piga sauti kwa vitendo",
     // App general
-    dukaDeni: 'Duka Deni',
+    dukaDeni: 'Credi',
 
     // Dashboard & Stats
     goodMorning: 'Habari za asubuhi',
@@ -240,6 +278,34 @@ export const translations = {
     typeToConfirm: 'Andika DELETE kuthibitisha',
     deletePlaceholder: 'DELETE',
     dataCleared: 'Data yote imefutwa',
+
+    // Usalama na PIN
+    appLock: 'Kufuli ya programu',
+    appLockEnabled: 'PIN inahitajika kufungua programu',
+    appLockDisabled: 'Tumia PIN au alama ya kidole',
+    changePIN: 'Badilisha PIN',
+    changePINSubtitle: 'Sasisha PIN yako ya tarakimu 4',
+    disableAppLock: 'Zima kufuli ya programu?',
+    disableAppLockMsg: 'PIN yako itahifadhiwa. Unaweza kuwezesha kufuli tena bila kuweka PIN mpya.',
+    disable: 'Zima',
+    enterPIN: 'Weka PIN',
+    createPIN: 'Unda PIN',
+    confirmPIN: 'Thibitisha PIN',
+    enterCurrentPIN: 'Weka PIN ya sasa',
+    enterNewPIN: 'Weka PIN mpya',
+    confirmNewPIN: 'Thibitisha PIN mpya',
+    enterYourPIN: 'Weka PIN yako ya tarakimu 4',
+    chooseAPIN: 'Chagua PIN ya tarakimu 4',
+    enterPINAgain: 'Weka PIN tena kuthibitisha',
+    verifyIdentity: 'Thibitisha utambulisho wako',
+    incorrectPIN: 'PIN si sahihi',
+    attemptsRemaining: (n: number) => `Majaribio ${n} yaliyobaki`,
+    tooManyAttempts: 'Majaribio mengi sana',
+    tryAgainIn: (s: number) => `Jaribu tena baada ya ${s}s`,
+    pinsDontMatch: 'PIN hazifanani. Jaribu tena.',
+    pinChanged: 'PIN imebadilishwa',
+    unlockDukaDeni: 'Fungua Credi',
+    usePIN: 'Tumia PIN',
   }
 };
 

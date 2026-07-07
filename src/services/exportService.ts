@@ -98,7 +98,7 @@ export async function exportAsJSON(db: SQLiteDatabase): Promise<ExportResult> {
     // mimeType tells the OS what kind of file it is so it knows which apps to offer.
     await Sharing.shareAsync(filePath, {
       mimeType: 'application/json',
-      dialogTitle: 'Save Duka Deni backup',
+      dialogTitle: 'Save Credi backup',
       UTI: 'public.json', // iOS: Uniform Type Identifier
     });
 

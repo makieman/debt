@@ -188,7 +188,7 @@ export function generateCSV(data: ExportData): string {
   const currency = data.shopProfile.currency;
 
   // ─── Summary header ───────────────────────────────────────────────────────
-  lines.push(csvEscape('Duka Deni Export'));
+  lines.push(csvEscape('Credi Export'));
   lines.push(`${csvEscape('Shop:')},${csvEscape(data.shopProfile.shopName)}`);
   lines.push(`${csvEscape('Owner:')},${csvEscape(data.shopProfile.ownerName)}`);
   lines.push(`${csvEscape('Exported:')},${csvEscape(formatTransactionDate(data.exportedAt))}`);

@@ -13,14 +13,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { CompositeNavigationProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 
 import { db } from '../db';
-import { seedDemoData } from '../db/seed';
 import { useThemeContext } from '../theme';
 import { useShopProfile } from '../store/ShopProfileContext';
 import { useLanguage } from '../store/LanguageContext';
-import { RootTabParamList } from '../navigation/types';
+import { useSecurityContext } from '../store/SecurityContext';
+import { disableAppLock, isPinSet } from '../store/security';
+import * as SecureStore from 'expo-secure-store';
+import { APP_LOCK_ENABLED_KEY } from '../store/security';
+import { RootTabParamList, RootStackParamList } from '../navigation/types';
 import { SettingsPickerModal } from '../components/SettingsPickerModal';
 import { SettingsRow } from '../components/settings/SettingsRow';
 import { Switch } from '../components/settings/Switch';
@@ -30,13 +35,35 @@ import { playPaymentSound } from '../utils/sound';
 import { ShopProfile } from '../store/shopProfile';
 import { getLastExportLabel } from '../services/exportService';
 
-type SettingsNavProp = BottomTabNavigationProp<RootTabParamList, 'Settings'>;
+/**
+ * ─── NAVIGATION TYPE FOR SETTINGS ────────────────────────────────────────────
+ *
+ * SettingsScreen lives inside the bottom tab navigator (RootTabParamList).
+ * BUT it needs to navigate to PinSetup and PinChange, which are in the
+ * ROOT stack (RootStackParamList) above the tab navigator.
+ *
+ * Solution: CompositeNavigationProp
+ *   - First type: the screen's own navigator (BottomTab, "Settings" screen)
+ *   - Second type: the parent navigator (NativeStack, any screen)
+ *
+ * With this, Settings can call:
+ *   navigation.navigate('Settings')    ← tab navigation (own navigator)
+ *   navigation.navigate('PinSetup')    ← root stack navigation (parent)
+ *
+ * Without CompositeNavigationProp, TypeScript would reject navigation to
+ * "PinSetup" because BottomTabNavigationProp doesn't know about it.
+ */
+type SettingsNavProp = CompositeNavigationProp<
+  BottomTabNavigationProp<RootTabParamList, 'Settings'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 export function SettingsScreen() {
   const navigation = useNavigation<SettingsNavProp>();
   const { colors, themeMode } = useThemeContext();
   const { profile, updateProfile } = useShopProfile();
   const { t } = useLanguage();
+  const { isAppLockEnabled, pinSetupComplete, refreshSecurityState } = useSecurityContext();
 
   const [loading, setLoading] = useState(false);
   const [versionTaps, setVersionTaps] = useState(0);
@@ -97,31 +124,7 @@ export function SettingsScreen() {
     setEditProfileVisible(false);
   }
 
-  function handleLoadDemoData() {
-    Alert.alert(
-      'Reset all data?',
-      'This will delete all current data and load 8 demo customers. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset & Load Demo', style: 'destructive', onPress: runSeed },
-      ]
-    );
-  }
 
-  async function runSeed() {
-    setLoading(true);
-    try {
-      await seedDemoData(db);
-      Alert.alert('✅ Demo data loaded', 'Loaded 8 customers · KES 9,400 total outstanding', [
-        { text: 'View Dashboard', onPress: () => navigation.navigate('Dashboard') },
-      ]);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      Alert.alert('Error', `Failed to load demo data: ${msg}`);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function handleVersionTap() {
     const newTaps = versionTaps + 1;
@@ -130,6 +133,54 @@ export function SettingsScreen() {
       Alert.alert('Developer Mode', t('developerMode'));
     }
   }
+
+  // ── Security handlers ──────────────────────────────────────────────────────
+
+  /**
+   * WHY CONFIRM BEFORE DISABLING BUT NOT BEFORE ENABLING?
+   *
+   * Enabling app lock is a PROTECTIVE action — it adds security. No risk.
+   * Disabling removes that protection — some risk. The confirmation Alert
+   * should match the risk level of the action.
+   *
+   * Analogies:
+   *   Locking your car: you just do it (no confirmation needed)
+   *   Removing your car's lock: the manufacturer asks "are you sure?"
+   *
+   * Same principle in banking apps: enabling PIN is immediate,
+   * disabling it requires a confirmation step.
+   */
+  const handleAppLockToggle = async (enabled: boolean) => {
+    if (enabled) {
+      if (!pinSetupComplete) {
+        // No PIN exists yet → go through the setup flow
+        // Do NOT enable lock yet — only enable after PIN is confirmed
+        navigation.navigate('PinSetup');
+      } else {
+        // PIN already exists → just re-enable the lock (no PIN re-entry needed)
+        // This is the "pause and resume" pattern:
+        // User disabled lock but kept their hash → easy re-enable
+        await SecureStore.setItemAsync(APP_LOCK_ENABLED_KEY, 'true');
+        await refreshSecurityState();
+      }
+    } else {
+      Alert.alert(
+        t('disableAppLock'),
+        t('disableAppLockMsg'),
+        [
+          { text: t('cancel'), style: 'cancel' },
+          {
+            text: t('disable'),
+            style: 'destructive',
+            onPress: async () => {
+              await disableAppLock();
+              await refreshSecurityState();
+            },
+          },
+        ]
+      );
+    }
+  };
 
   // ── Open Pickers ────────────────────────────────────────────────────────────
 
@@ -374,6 +425,41 @@ export function SettingsScreen() {
           />
         </View>
 
+        {/* ── Security Section ── */}
+        {/*
+         * WHY "Change PIN" ONLY SHOWS WHEN LOCK IS ENABLED?
+         * Changing a PIN that protects nothing is meaningless. The row
+         * appears only in the context where it's relevant — when lock is on.
+         * This matches every banking app: security options only appear
+         * when security is active. Showing irrelevant options adds clutter.
+         */}
+        <Text style={styles.sectionLabel}>{t('security').toUpperCase()}</Text>
+        <View style={styles.card}>
+          <SettingsRow
+            icon="lock-closed-outline"
+            iconColor={colors.accent.teal}
+            title={t('appLock')}
+            subtitle={isAppLockEnabled ? t('appLockEnabled') : t('appLockDisabled')}
+            showChevron={false}
+            rightElement={
+              <Switch
+                value={isAppLockEnabled}
+                onValueChange={handleAppLockToggle}
+              />
+            }
+          />
+          {isAppLockEnabled && (
+            <SettingsRow
+              icon="keypad-outline"
+              iconColor={colors.accent.teal}
+              title={t('changePIN')}
+              subtitle={t('changePINSubtitle')}
+              showChevron={true}
+              onPress={() => navigation.navigate('PinChange')}
+            />
+          )}
+        </View>
+
         {/* ── Data & Backup Section ── */}
         <Text style={styles.sectionLabel}>{t('backupSync').toUpperCase()}</Text>
         <View style={styles.card}>
@@ -408,7 +494,7 @@ export function SettingsScreen() {
         <View style={styles.card}>
           <View style={styles.row}>
             <Text style={styles.rowLabel}>App</Text>
-            <Text style={styles.rowValue}>Duka Deni</Text>
+            <Text style={styles.rowValue}>Credi</Text>
           </View>
           <View style={[styles.divider, { marginLeft: 16 }]} />
           <Pressable style={styles.row} onPress={handleVersionTap}>
@@ -422,9 +508,6 @@ export function SettingsScreen() {
           </View>
         </View>
 
-        <Pressable style={styles.demoButton} onPress={handleLoadDemoData} disabled={loading}>
-          {loading ? <ActivityIndicator size="small" color={colors.accent.teal} /> : <Text style={styles.demoButtonText}>Load Demo Data</Text>}
-        </Pressable>
 
         <View style={styles.bottomPad} />
       </ScrollView>

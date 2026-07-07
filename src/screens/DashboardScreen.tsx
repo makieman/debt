@@ -108,10 +108,7 @@ export function DashboardScreen() {
       >
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <View style={styles.header}>
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="menu-outline" size={24} color={colors.text.primary} />
-          </Pressable>
-          <View style={styles.headerTitleContainer}>
+          <View style={[styles.headerTitleContainer, { paddingHorizontal: 0, paddingRight: 12 }]}>
             <Text style={styles.greeting}>{getGreeting()}, {capitalizedName} 👋</Text>
             <Text style={styles.greetingSub}>{t('businessOverview')}</Text>
           </View>

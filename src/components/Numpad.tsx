@@ -159,41 +159,37 @@ function NumpadKey({ label, onPress, isBackspace }: NumpadKeyProps) {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-// Key size: screen width minus horizontal padding, divided across 3 columns
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const KEY_SIZE = Math.floor((SCREEN_WIDTH - 48 - 16) / 3); // 48px side pad, 16px gap
 
 const makeStyles = (colors: Colors) => StyleSheet.create({
   container: {
     width: '100%',
-    gap: 8,
+    maxWidth: 280,
+    alignSelf: 'center',
+    paddingVertical: 10,
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 32, // wide vertical spacing
   },
   key: {
-    width: KEY_SIZE,
-    height: KEY_SIZE * 0.6,        // keys are wider than tall (like a real numpad)
-    backgroundColor: colors.background.secondary,
-    borderRadius: 12,
+    flex: 1, // evenly space across the row
+    height: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.background.tertiary,
   },
   keyPressed: {
-    backgroundColor: colors.background.tertiary,
+    opacity: 0.5, // simple opacity instead of background pop
   },
   keyLabel: {
-    fontSize: 28,
+    fontSize: 36, // prominent text
     color: colors.text.primary,
     fontWeight: '400',
     textAlign: 'center',
   },
   backspaceLabel: {
-    fontSize: 22,             // slightly smaller so ⌫ fits comfortably
+    fontSize: 28,             
     color: colors.text.secondary,
   },
 });

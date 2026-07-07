@@ -188,8 +188,8 @@ describe('generateCSV()', () => {
     lines = csv.split('\n');
   });
 
-  it('starts with the Duka Deni Export header', () => {
-    expect(lines[0]).toBe('"Duka Deni Export"');
+  it('starts with the Credi Export header', () => {
+    expect(lines[0]).toBe('"Credi Export"');
   });
 
   it('includes the shop name in the summary header', () => {

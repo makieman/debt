@@ -131,7 +131,7 @@ export function PinDot({ filled, error, index }: PinDotProps) {
   );
 }
 
-const DOT_SIZE = 18;
+const DOT_SIZE = 22;
 
 const styles = StyleSheet.create({
   dot: {

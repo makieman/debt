@@ -75,30 +75,29 @@ interface PinScreenProps {
 // ─── Title + Subtitle maps ────────────────────────────────────────────────────
 
 const TITLES: Record<PinMode, string> = {
-  'unlock':         'Enter PIN',
-  'setup':          'Create PIN',
-  'setup-confirm':  'Confirm PIN',
+  'unlock': 'Enter PIN',
+  'setup': 'Create PIN',
+  'setup-confirm': 'Confirm PIN',
   'change-current': 'Enter current PIN',
-  'change-new':     'Enter new PIN',
+  'change-new': 'Enter new PIN',
   'change-confirm': 'Confirm new PIN',
 };
 
 const SUBTITLES: Record<PinMode, string> = {
-  'unlock':         'Enter your 4-digit PIN',
-  'setup':          'Choose a 4-digit PIN',
-  'setup-confirm':  'Enter PIN again to confirm',
+  'unlock': 'Enter your 4-digit PIN',
+  'setup': 'Choose a 4-digit PIN',
+  'setup-confirm': 'Enter PIN again to confirm',
   'change-current': 'Verify your identity',
-  'change-new':     'Choose a new 4-digit PIN',
+  'change-new': 'Choose a new 4-digit PIN',
   'change-confirm': 'Enter new PIN again to confirm',
 };
 
-// ─── Numpad layout ────────────────────────────────────────────────────────────
 
-const NUMPAD: (string | null)[] = [
-  '1', '2', '3',
-  '4', '5', '6',
-  '7', '8', '9',
-  null, '0', '⌫',
+const NUMPAD_ROWS: (string | null)[][] = [
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+  [ '0', '\u232B'],
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -369,103 +368,126 @@ export function PinScreen({ mode, onSuccess, onCancel, enteredPin }: PinScreenPr
           <Text style={styles.subtitle}>{SUBTITLES[mode]}</Text>
         </View>
 
-        {/* ── PIN dots ── */}
-        <View style={styles.dotsRow}>
-          {[0, 1, 2, 3].map((i) => (
-            <PinDot
-              key={i}
-              index={i}
-              filled={i < currentPin.length}
-              error={dotError}
-            />
-          ))}
+        {/* ── Middle: PIN dots + error/lockout ── */}
+        <View style={styles.middleSection}>
+          {/* PIN dots */}
+          <View style={styles.dotsRow}>
+            {[0, 1, 2, 3].map((i) => (
+              <PinDot
+                key={i}
+                index={i}
+                filled={i < currentPin.length}
+                error={dotError}
+              />
+            ))}
+          </View>
+
+          {/* Error message */}
+          <Animated.View
+            style={[
+              styles.errorContainer,
+              { transform: [{ translateY: errorSlide }], opacity: errorOpacity },
+            ]}
+          >
+            {error && !isLockedOut && (
+              <Text style={styles.errorText}>{error}</Text>
+            )}
+          </Animated.View>
+
+          {/* Lockout countdown */}
+          {isLockedOut && (
+            <View style={styles.lockoutContainer}>
+              <Text style={styles.lockoutLabel}>Too many attempts</Text>
+              <Text style={styles.countdownText}>{formatCountdown(lockoutRemaining)}</Text>
+              <Text style={styles.lockoutSub}>Try again after the countdown</Text>
+            </View>
+          )}
         </View>
 
-        {/* ── Error message ── */}
-        <Animated.View
-          style={[
-            styles.errorContainer,
-            { transform: [{ translateY: errorSlide }], opacity: errorOpacity },
-          ]}
-        >
-          {error && !isLockedOut && (
-            <Text style={styles.errorText}>{error}</Text>
-          )}
-        </Animated.View>
-
-        {/* ── Lockout countdown ── */}
-        {isLockedOut && (
-          <View style={styles.lockoutContainer}>
-            <Text style={styles.lockoutLabel}>Too many attempts</Text>
-            <Text style={styles.countdownText}>{formatCountdown(lockoutRemaining)}</Text>
-            <Text style={styles.lockoutSub}>Try again after the countdown</Text>
-          </View>
-        )}
-
-        {/* ── Spacer ── */}
-        <View style={styles.spacer} />
-
-        {/* ── Numpad ── */}
+        {/* ── Numpad — 4 rows × 3 columns ── */}
         <View style={[styles.numpad, isLockedOut && styles.numpadDisabled]}>
-          {NUMPAD.map((key, i) => {
-            if (key === null) {
-              // Bottom-left: biometric icon (unlock mode) or empty
-              return (
-                <View key={`empty-${i}`} style={styles.keyPlaceholder}>
-                  {showBiometric && mode === 'unlock' && (
+          {NUMPAD_ROWS.map((row, rowIndex) => (
+            <View key={rowIndex} style={styles.numpadRow}>
+              {row.map((key, colIndex) => {
+                const isEmpty = key === null;
+                const isBio = isEmpty && showBiometric && mode === 'unlock';
+
+                // Empty placeholder cell
+                if (isEmpty && !isBio) {
+                  return (
+                    <View key={`empty-${colIndex}`} style={styles.key}>
+                      <View style={[styles.keyCircle, { backgroundColor: 'transparent', borderColor: 'transparent' }]} />
+                    </View>
+                  );
+                }
+
+                // Biometric key cell
+                if (isBio) {
+                  return (
                     <Pressable
-                      style={styles.bioKey}
+                      key="biometric"
+                      style={({ pressed }) => [
+                        styles.key,
+                        pressed && styles.keyPressed,
+                      ]}
                       onPress={handleBiometric}
                       disabled={isLockedOut}
                     >
-                      <Ionicons
-                        name="finger-print"
-                        size={28}
-                        color={isLockedOut ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)'}
-                      />
+                      <View style={[styles.keyCircle, { backgroundColor: 'transparent', borderColor: 'transparent' }]}>
+                        <Ionicons
+                          name="finger-print"
+                          size={28}
+                          color={isLockedOut ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)'}
+                        />
+                      </View>
                     </Pressable>
-                  )}
-                </View>
-              );
-            }
+                  );
+                }
 
-            if (key === '⌫') {
-              return (
-                <Pressable
-                  key="backspace"
-                  style={({ pressed }) => [
-                    styles.key,
-                    styles.keySpecial,
-                    pressed && styles.keyPressed,
-                  ]}
-                  onPress={handleBackspace}
-                  disabled={isLockedOut}
-                >
-                  <Ionicons
-                    name="backspace-outline"
-                    size={24}
-                    color={isLockedOut ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.8)'}
-                  />
-                </Pressable>
-              );
-            }
+                // Backspace key
+                if (key === '\u232B') {
+                  return (
+                    <Pressable
+                      key="backspace"
+                      style={({ pressed }) => [
+                        styles.key,
+                        pressed && styles.keyPressed,
+                      ]}
+                      onPress={handleBackspace}
+                      disabled={isLockedOut}
+                    >
+                      <View style={styles.keyCircle}>
+                        <Ionicons
+                          name="backspace-outline"
+                          size={24}
+                          color={isLockedOut ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.8)'}
+                        />
+                      </View>
+                    </Pressable>
+                  );
+                }
 
-            return (
-              <Pressable
-                key={key}
-                style={({ pressed }) => [
-                  styles.key,
-                  pressed && !isLockedOut && styles.keyPressed,
-                ]}
-                onPress={() => handleDigit(key)}
-                disabled={isLockedOut}
-              >
-                <Text style={[styles.keyText, isLockedOut && styles.keyTextDisabled]}>
-                  {key}
-                </Text>
-              </Pressable>
-            );
-          })}
+                // Digit key
+                return (
+                  <Pressable
+                    key={key}
+                    style={({ pressed }) => [
+                      styles.key,
+                      pressed && !isLockedOut && styles.keyPressed,
+                    ]}
+                    onPress={() => handleDigit(key)}
+                    disabled={isLockedOut}
+                  >
+                    <View style={styles.keyCircle}>
+                      <Text style={[styles.keyText, isLockedOut && styles.keyTextDisabled]}>
+                        {key}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
         </View>
 
         {/* ── Bottom padding ── */}
@@ -482,6 +504,7 @@ const MAX_ATTEMPTS = 5;
 // ─── Styles ────────────────────────────────────────────────────────────────────
 
 const KEY_SIZE = 72;
+const KEY_CIRCLE = 68;
 
 const styles = StyleSheet.create({
   container: {
@@ -491,58 +514,71 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
   },
   cancelButton: {
     alignSelf: 'center',
     padding: 16,
-    marginTop: 8,
+    marginTop: 4,
   },
 
   // ── Top section ──
   topSection: {
     alignItems: 'center',
-    marginTop: 48,
-    marginBottom: 40,
+    paddingTop: 8,
   },
   monogram: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: 'rgba(45, 212, 191, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(45, 212, 191, 0.3)',
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    backgroundColor: 'rgba(45, 212, 191, 0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(45, 212, 191, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
+    // Soft glow
+    shadowColor: '#2DD4BF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
   },
   monogramText: {
     color: '#2DD4BF',
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
   },
   title: {
     color: '#FFFFFF',
     fontSize: 26,
     fontWeight: '700',
     letterSpacing: -0.5,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.45)',
     fontSize: 15,
+  },
+
+  // ── Middle section (dots + feedback) ──
+  middleSection: {
+    alignItems: 'center',
+    gap: 4,
   },
 
   // ── Dots ──
   dotsRow: {
     flexDirection: 'row',
-    gap: 20,
-    marginBottom: 16,
+    gap: 24,
+    marginBottom: 4,
   },
 
   // ── Error ──
   errorContainer: {
-    height: 24,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
@@ -557,7 +593,6 @@ const styles = StyleSheet.create({
   // ── Lockout ──
   lockoutContainer: {
     alignItems: 'center',
-    marginTop: 8,
     paddingHorizontal: 32,
   },
   lockoutLabel: {
@@ -578,55 +613,58 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  spacer: { flex: 1 },
-
   // ── Numpad ──
   numpad: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
     width: '100%',
-    maxWidth: 320, // Constrain width so it's not too spread out
+    maxWidth: 360,
     alignSelf: 'center',
-    paddingHorizontal: 16,
-    rowGap: 24, // vertical spacing between rows
+    gap: 8,
+  },
+  numpadRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
   },
   numpadDisabled: {
     opacity: 0.3,
   },
   key: {
-    width: '33.33%', // 3 columns exactly
-    height: 72,
+    flex: 1,
+    height: KEY_SIZE,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  keySpecial: {
-    backgroundColor: 'transparent',
+  keyCircle: {
+    width: KEY_CIRCLE,
+    height: KEY_CIRCLE,
+    borderRadius: KEY_CIRCLE / 2,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   keyPressed: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   keyText: {
     color: '#FFFFFF',
-    fontSize: 32, // larger, minimal numbers
+    fontSize: 28,
     fontWeight: '400',
+    letterSpacing: 0.5,
   },
   keyTextDisabled: {
     color: 'rgba(255,255,255,0.3)',
   },
-  keyPlaceholder: {
-    width: '33.33%',
-    height: 72,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
   bioKey: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: KEY_CIRCLE,
+    height: KEY_CIRCLE,
+    borderRadius: KEY_CIRCLE / 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
-  bottomPad: { height: 32 },
+  bottomPad: { height: 16 },
 });
+

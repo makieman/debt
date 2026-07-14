@@ -36,7 +36,8 @@
           "faceIDPermission": "Allow Credi to use Face ID."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-splash-screen"
     ],
     "extra": {
       "eas": {

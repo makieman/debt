@@ -58,6 +58,7 @@ export function ExportSheet({ visible, onClose, db }: Props) {
   const [jsonState, setJsonState] = useState<CardState>('idle');
   const [csvState, setCsvState] = useState<CardState>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [driveBackedUp, setDriveBackedUp] = useState(false);
 
   const isExporting = jsonState === 'loading' || csvState === 'loading';
 
@@ -71,10 +72,12 @@ export function ExportSheet({ visible, onClose, db }: Props) {
   const handleExportJSON = useCallback(async () => {
     setJsonState('loading');
     setErrorMessage(null);
+    setDriveBackedUp(false);
     const result = await exportAsJSON(db);
     if (result.success) {
       // Refresh context profile so the settings row label updates immediately
       await updateProfile({ lastExportDate: new Date().toISOString() });
+      setDriveBackedUp(result.driveBackedUp ?? false);
       setJsonState('success');
       setTimeout(() => setJsonState('idle'), 1500);
     } else {
@@ -158,6 +161,12 @@ export function ExportSheet({ visible, onClose, db }: Props) {
               >
                 {renderButtonLabel(jsonState, t('exportData'))}
               </Pressable>
+              {/* Drive backup confirmation — appears briefly after a backed-up export */}
+              {jsonState === 'success' && driveBackedUp && (
+                <Text style={[s.driveLabel, { color: colors.accent.teal }]}>
+                  ☁ Backed up to Google Drive
+                </Text>
+              )}
             </View>
 
             {/* CSV card */}
@@ -304,6 +313,12 @@ function makeStyles(colors: ReturnType<typeof import('../../theme').useThemeCont
       fontSize: 12,
       textAlign: 'center',
       marginTop: 4,
+    },
+    driveLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      textAlign: 'center',
+      marginTop: 6,
     },
   });
 }

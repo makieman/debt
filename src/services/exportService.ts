@@ -56,6 +56,7 @@ import {
 } from '../repositories/export';
 import { loadShopProfile, saveShopProfile } from '../store/shopProfile';
 import { formatTransactionDate } from '../utils/dates';
+import { uploadBackupToDrive, makeDriveFilename } from './googleDriveService';
 
 // ─── FUNCTION 1: exportAsJSON ─────────────────────────────────────────────────
 
@@ -102,6 +103,20 @@ export async function exportAsJSON(db: SQLiteDatabase): Promise<ExportResult> {
       UTI: 'public.json', // iOS: Uniform Type Identifier
     });
 
+    // ── SILENT DRIVE BACKUP ────────────────────────────────────────────────
+    // Attempt to upload the same file to Google Drive's hidden appDataFolder.
+    // This runs AFTER sharing so it never delays or blocks the share sheet.
+    // If Drive is not connected (no token), uploadBackupToDrive returns
+    // immediately without error. Any failure is logged but does NOT affect
+    // the export result — the user's local share always succeeds independently.
+    let driveBackedUp = false;
+    try {
+      const driveResult = await uploadBackupToDrive(filePath, makeDriveFilename());
+      driveBackedUp = driveResult.success;
+    } catch (driveError) {
+      console.error('[exportService] Silent Drive backup failed:', driveError);
+    }
+
     // Only update lastExportDate AFTER sharing completes successfully.
     // If we updated before, we'd show "Last exported: Today" even if sharing was cancelled.
     const updatedProfile = { ...profile, lastExportDate: new Date().toISOString() };
@@ -111,6 +126,7 @@ export async function exportAsJSON(db: SQLiteDatabase): Promise<ExportResult> {
       success: true,
       filePath,
       rowCount: data.summary.totalTransactions,
+      driveBackedUp,
     };
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);

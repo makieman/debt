@@ -25,6 +25,7 @@
       "expo-sqlite",
       "expo-sharing",
       "expo-secure-store",
+      "expo-web-browser",
       [
         "expo-local-authentication",
         {

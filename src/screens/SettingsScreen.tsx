@@ -34,6 +34,8 @@ import { ClearDataSheet } from '../components/settings/ClearDataSheet';
 import { playPaymentSound } from '../utils/sound';
 import { ShopProfile } from '../store/shopProfile';
 import { getLastExportLabel } from '../services/exportService';
+import { connectGoogleDrive, disconnectGoogleDrive } from '../services/googleDriveService';
+import { isDriveConnected } from '../store/googleAuth';
 
 /**
  * ─── NAVIGATION TYPE FOR SETTINGS ────────────────────────────────────────────
@@ -70,6 +72,13 @@ export function SettingsScreen() {
   const [showExportSheet, setShowExportSheet] = useState(false);
   const [showClearSheet, setShowClearSheet] = useState(false);
   const [lastExportLabel, setLastExportLabel] = useState('Never exported');
+  const [driveConnected, setDriveConnected] = useState(false);
+  const [driveConnecting, setDriveConnecting] = useState(false);
+
+  // Load Drive connected state on mount
+  React.useEffect(() => {
+    isDriveConnected().then(setDriveConnected);
+  }, []);
 
   /**
    * WHY THIS useEffect UPDATES AUTOMATICALLY AFTER EXPORT:
@@ -133,6 +142,39 @@ export function SettingsScreen() {
       Alert.alert('Developer Mode', t('developerMode'));
     }
   }
+
+  // ── Google Drive handlers ──────────────────────────────────────────────────
+
+  const handleDriveToggle = async (enabled: boolean) => {
+    if (enabled) {
+      setDriveConnecting(true);
+      const success = await connectGoogleDrive();
+      setDriveConnected(success);
+      setDriveConnecting(false);
+      if (!success) {
+        Alert.alert(
+          'Google Drive',
+          'Could not connect. Make sure you signed in and granted Drive access.',
+        );
+      }
+    } else {
+      Alert.alert(
+        'Disconnect Google Drive',
+        'Future exports will no longer be backed up automatically.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Disconnect',
+            style: 'destructive',
+            onPress: async () => {
+              await disconnectGoogleDrive();
+              setDriveConnected(false);
+            },
+          },
+        ]
+      );
+    }
+  };
 
   // ── Security handlers ──────────────────────────────────────────────────────
 
@@ -470,6 +512,24 @@ export function SettingsScreen() {
             subtitle={`${t('lastExported')}: ${lastExportLabel}`}
             showChevron={true}
             onPress={() => setShowExportSheet(true)}
+          />
+          <SettingsRow
+            icon="logo-google"
+            iconColor={driveConnected ? colors.accent.teal : colors.text.secondary}
+            title="Google Drive Backup"
+            subtitle={
+              driveConnecting
+                ? 'Connecting...'
+                : driveConnected
+                  ? 'Connected — JSON exports backed up automatically'
+                  : 'Not connected'
+            }
+            showChevron={false}
+            rightElement={
+              driveConnecting
+                ? <ActivityIndicator size="small" color={colors.accent.teal} />
+                : <Switch value={driveConnected} onValueChange={handleDriveToggle} />
+            }
           />
           <SettingsRow
             icon="download-outline"

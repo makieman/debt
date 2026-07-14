@@ -75,7 +75,8 @@ export interface ExportResult {
   success: boolean;
   filePath?: string;
   error?: string;
-  rowCount?: number; // number of transactions in this export
+  rowCount?: number;    // number of transactions in this export
+  driveBackedUp?: boolean; // true if the file was also uploaded to Google Drive
 }
 
 // ─── FUNCTION 1: getFullExportData ──────────────────────────────────────────

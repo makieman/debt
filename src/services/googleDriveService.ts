@@ -75,10 +75,6 @@ const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
 WebBrowser.maybeCompleteAuthSession();
 
 // OAuth discovery document — tells AuthSession where Google's auth endpoints are.
-const DISCOVERY = AuthSession.useAutoDiscovery
-  ? undefined // handled at call site
-  : undefined;
-
 const GOOGLE_DISCOVERY_URI = 'https://accounts.google.com';
 
 // The only scope we request: access to the hidden appDataFolder.

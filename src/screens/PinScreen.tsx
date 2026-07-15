@@ -97,7 +97,7 @@ const NUMPAD_ROWS: (string | null)[][] = [
   ['1', '2', '3'],
   ['4', '5', '6'],
   ['7', '8', '9'],
-  [ '0', '\u232B'],
+  ['0', '\u232B'],
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -467,7 +467,9 @@ export function PinScreen({ mode, onSuccess, onCancel, enteredPin }: PinScreenPr
                   );
                 }
 
-                // Digit key
+                // Digit key — key is guaranteed non-null here, but we narrow
+                // explicitly so TypeScript understands it's a string.
+                if (key === null) return null;
                 return (
                   <Pressable
                     key={key}

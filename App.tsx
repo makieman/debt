@@ -69,6 +69,7 @@ import {
   Pressable,
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -210,20 +211,22 @@ export default function App() {
   // RootStack wraps RootTabs and adds PinSetupScreen + PinChangeScreen as
   // full-screen modal screens reachable from anywhere in the app.
   return (
-    <ShopProfileProvider>
-      <SecurityProvider>
-        <LanguageProvider>
-          <ThemeProvider>
-            <SafeAreaProvider>
-              <StatusBar style="dark" />
-              <NavigationContainer>
-                <AppGate />
-              </NavigationContainer>
-            </SafeAreaProvider>
-          </ThemeProvider>
-        </LanguageProvider>
-      </SecurityProvider>
-    </ShopProfileProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ShopProfileProvider>
+        <SecurityProvider>
+          <LanguageProvider>
+            <ThemeProvider>
+              <SafeAreaProvider>
+                <StatusBar style="dark" />
+                <NavigationContainer>
+                  <AppGate />
+                </NavigationContainer>
+              </SafeAreaProvider>
+            </ThemeProvider>
+          </LanguageProvider>
+        </SecurityProvider>
+      </ShopProfileProvider>
+    </GestureHandlerRootView>
   );
 }
 

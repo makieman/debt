@@ -67,7 +67,7 @@ import {
 // ─── CONFIGURE THIS ───────────────────────────────────────────────────────────
 // Paste your Google Cloud OAuth Client ID here.
 // It looks like: 123456789012-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com
-const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '104870381302-up3c4p6td5rt0sk70cnvqitf0llshdbq.apps.googleusercontent.com';
 
 // ─────────────────────────────────────────────────────────────────────────────
 

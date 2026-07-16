@@ -60,7 +60,7 @@
 
 import "./global.css"; // ← MUST be the very first import — initialises NativeWind
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -91,6 +91,58 @@ type BootState = "pending" | "running" | "done" | "error";
 
 /** AsyncStorage key for the first-launch flag */
 const FIRST_LAUNCH_KEY = "hasLaunched_v1";
+
+// ─── AppErrorBoundary ─────────────────────────────────────────────────────────
+//
+// TEMPORARY: Catches JS errors that would otherwise cause a silent crash.
+// Renders the error message on screen so we can diagnose the crash cause.
+// Remove before final production release.
+
+interface ErrorBoundaryState {
+  error: Error | null;
+}
+
+class AppErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  ErrorBoundaryState
+> {
+  state: ErrorBoundaryState = { error: null };
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[AppErrorBoundary] Caught error:', error.message);
+    console.error('[AppErrorBoundary] Stack:', error.stack);
+    console.error('[AppErrorBoundary] Component stack:', info.componentStack);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{
+          flex: 1,
+          backgroundColor: '#0F1117',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 32,
+        }}>
+          <Text style={{ color: '#ff4444', fontSize: 18, fontWeight: '700', marginBottom: 12 }}>
+            ⚠️ App Startup Error
+          </Text>
+          <Text style={{ color: '#ff8888', fontSize: 13, textAlign: 'center', marginBottom: 8 }}>
+            {this.state.error.message}
+          </Text>
+          <Text style={{ color: '#666', fontSize: 11, textAlign: 'center', fontFamily: 'monospace' }}>
+            {this.state.error.stack?.split('\n').slice(0, 5).join('\n')}
+          </Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 //                                       ^^^ Include a version suffix.
 //                                       If you ever need to re-run first-launch
 //                                       logic (e.g. for a major update), bump
@@ -211,7 +263,8 @@ export default function App() {
   // RootStack wraps RootTabs and adds PinSetupScreen + PinChangeScreen as
   // full-screen modal screens reachable from anywhere in the app.
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <AppErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
       <ShopProfileProvider>
         <SecurityProvider>
           <LanguageProvider>
@@ -226,7 +279,8 @@ export default function App() {
           </LanguageProvider>
         </SecurityProvider>
       </ShopProfileProvider>
-    </GestureHandlerRootView>
+      </GestureHandlerRootView>
+    </AppErrorBoundary>
   );
 }
 

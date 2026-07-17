@@ -11,7 +11,7 @@ import {
   Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -30,8 +30,10 @@ import { SettingsPickerModal } from '../components/SettingsPickerModal';
 import { SettingsRow } from '../components/settings/SettingsRow';
 import { Switch } from '../components/settings/Switch';
 import { ExportSheet } from '../components/settings/ExportSheet';
+import { ImportSheet } from '../components/settings/ImportSheet';
 import { ClearDataSheet } from '../components/settings/ClearDataSheet';
 import { playPaymentSound } from '../utils/sound';
+import { seedDemoData } from '../db/seed';
 import { ShopProfile } from '../store/shopProfile';
 import { getLastExportLabel } from '../services/exportService';
 import { connectGoogleDrive, disconnectGoogleDrive } from '../services/googleDriveService';
@@ -71,6 +73,7 @@ export function SettingsScreen() {
   const [versionTaps, setVersionTaps] = useState(0);
   const [showExportSheet, setShowExportSheet] = useState(false);
   const [showClearSheet, setShowClearSheet] = useState(false);
+  const [showImportSheet, setShowImportSheet] = useState(false);
   const [lastExportLabel, setLastExportLabel] = useState('Never exported');
   const [driveConnected, setDriveConnected] = useState(false);
   const [driveConnecting, setDriveConnecting] = useState(false);
@@ -79,6 +82,31 @@ export function SettingsScreen() {
   React.useEffect(() => {
     isDriveConnected().then(setDriveConnected);
   }, []);
+
+  const [customerCount, setCustomerCount] = useState<number>(0);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let isMounted = true;
+      async function checkData() {
+        try {
+          const result = await db.getAllAsync<{ count: number }>('SELECT COUNT(*) as count FROM customers;');
+          if (isMounted) {
+            setCustomerCount(result && result[0] ? result[0].count : 0);
+          }
+        } catch (e) {
+          console.error('[SettingsScreen] checkData failed:', e);
+          if (isMounted) {
+            setCustomerCount(0);
+          }
+        }
+      }
+      checkData();
+      return () => {
+        isMounted = false;
+      };
+    }, [loading])
+  );
 
   /**
    * WHY THIS useEffect UPDATES AUTOMATICALLY AFTER EXPORT:
@@ -222,6 +250,32 @@ export function SettingsScreen() {
         ]
       );
     }
+  };
+
+  const handleLoadDemoData = () => {
+    Alert.alert(
+      'Load Demo Data?',
+      'This will permanently delete all current customers and transactions and replace them with sample data for demonstration. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Load Demo',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              await seedDemoData(db);
+              Alert.alert('Success', 'Demo data loaded successfully!');
+            } catch (err) {
+              console.error('[SettingsScreen] seedDemoData failed:', err);
+              Alert.alert('Error', 'Failed to load demo data.');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   // ── Open Pickers ────────────────────────────────────────────────────────────
@@ -540,6 +594,22 @@ export function SettingsScreen() {
             onPress={() => setShowExportSheet(true)}
           />
           <SettingsRow
+            icon="cloud-upload-outline"
+            iconColor={colors.accent.teal}
+            title={t('importData')}
+            subtitle={t('importDataSubtitle')}
+            showChevron={true}
+            onPress={() => setShowImportSheet(true)}
+          />
+          <SettingsRow
+            icon="beaker-outline"
+            iconColor={customerCount > 0 ? colors.text.muted : colors.accent.teal}
+            title="Load Demo Data"
+            subtitle={customerCount > 0 ? "Disabled (Clear data first to load demo data)" : "Reset with 8 sample customers and transactions"}
+            showChevron={customerCount === 0}
+            onPress={customerCount === 0 ? handleLoadDemoData : undefined}
+          />
+          <SettingsRow
             icon="trash-outline"
             iconColor={colors.debt}
             title={t('clearAllData')}
@@ -619,6 +689,17 @@ export function SettingsScreen() {
       <ExportSheet
         visible={showExportSheet}
         onClose={() => setShowExportSheet(false)}
+        db={db}
+      />
+
+      {/* -- Import Sheet -- */}
+      <ImportSheet
+        visible={showImportSheet}
+        onClose={() => setShowImportSheet(false)}
+        onImportComplete={() => {
+          // Close the sheet — parent screens re-fetch on focus automatically
+          setShowImportSheet(false);
+        }}
         db={db}
       />
 

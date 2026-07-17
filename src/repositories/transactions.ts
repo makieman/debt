@@ -264,6 +264,7 @@ export async function getTopDebtors(
        AS balance
      FROM customers c
      LEFT JOIN transactions t ON t.customerId = c.id
+     WHERE c.isDeleted = 0
      GROUP BY c.id, c.name
      HAVING balance > 0
      ORDER BY balance DESC
@@ -311,6 +312,7 @@ export async function getRecentActivity(
        t.createdAt
      FROM transactions t
      JOIN customers c ON c.id = t.customerId
+     WHERE c.isDeleted = 0
      ORDER BY t.createdAt DESC
      LIMIT ?`,
     [limit]
@@ -330,7 +332,7 @@ export async function getRecentActivity(
  */
 export async function getCustomerCount(db: SQLiteDatabase): Promise<number> {
   const row = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) AS count FROM customers`
+    `SELECT COUNT(*) AS count FROM customers WHERE isDeleted = 0`
   );
   return row?.count ?? 0;
 }
@@ -428,6 +430,7 @@ export async function getAllCustomersWithBalances(
        ) AS balance
      FROM customers c
      LEFT JOIN transactions t ON t.customerId = c.id
+     WHERE c.isDeleted = 0
      GROUP BY c.id, c.name, c.phone, c.createdAt
      ORDER BY c.name ASC`
   );

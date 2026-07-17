@@ -28,6 +28,7 @@ import { useCustomers } from "../hooks/useCustomers";
 import { CustomerCard } from "../components/CustomerCard";
 import { EmptyState } from "../components/EmptyState";
 import { AddCustomerModal } from "../components/AddCustomerModal";
+import { EditCustomerModal } from "../components/EditCustomerModal";
 import { CustomerListNavProp } from "../navigation/types";
 import { CustomerWithBalance } from "../types";
 
@@ -37,13 +38,15 @@ export function CustomerListScreen() {
   const { t } = useLanguage();
   const currency = profile?.currency || 'KES';
   const styles = makeStyles(colors);
-  const { customers, totalOwed, totalPaid, loading, error, refresh } = useCustomers();
+  const { customers, totalOwed, totalPaid, loading, refreshing, error, refresh } = useCustomers();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<CustomerListNavProp>();
 
   // ── State ─────────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerWithBalance | null>(null);
   const [filterMode, setFilterMode] = useState<'all' | 'owes' | 'settled'>('all');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -55,6 +58,11 @@ export function CustomerListScreen() {
   const handleCardPress = useCallback((customer: CustomerWithBalance) => {
     navigation.navigate('Transaction', { customer });
   }, [navigation]);
+
+  const handleCardLongPress = useCallback((customer: CustomerWithBalance) => {
+    setSelectedCustomer(customer);
+    setEditModalVisible(true);
+  }, []);
 
   // ── Filtered customer list ───────────────────────────────────────────────
   const filteredCustomers = customers.filter((c) => {
@@ -230,6 +238,7 @@ export function CustomerListScreen() {
             customer={item}
             balance={item.balance}
             onPress={() => handleCardPress(item)}
+            onLongPress={() => handleCardLongPress(item)}
           />
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -244,7 +253,7 @@ export function CustomerListScreen() {
             <EmptyState />
           )
         }
-        refreshing={loading}
+        refreshing={refreshing}
         onRefresh={refresh}
         contentContainerStyle={[
           styles.listContent,
@@ -258,7 +267,7 @@ export function CustomerListScreen() {
         onPress={() => setModalVisible(true)}
         style={({ pressed }) => [
           styles.fab,
-          { bottom: insets.bottom + 24 },
+          { bottom: insets.bottom + 65 },
           pressed && styles.fabPressed,
         ]}
         accessibilityLabel="Add new customer"
@@ -272,6 +281,20 @@ export function CustomerListScreen() {
         onClose={() => setModalVisible(false)}
         onSuccess={handleModalSuccess}
       />
+
+      {selectedCustomer && (
+        <EditCustomerModal
+          visible={editModalVisible}
+          customer={selectedCustomer}
+          onClose={() => {
+            setEditModalVisible(false);
+            setSelectedCustomer(null);
+          }}
+          onSuccess={() => {
+            refresh();
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -490,10 +513,10 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
   // ── FAB ────────────────────────────────────────────────────────────────────
   fab: {
     position: "absolute",
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    right: 15,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.accent.teal,
     alignItems: "center",
     justifyContent: "center",
@@ -509,9 +532,9 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
   },
   fabIcon: {
     color: colors.white,
-    fontSize: 30,
+    fontSize: 36,
     fontWeight: "300",
-    lineHeight: 34,
+    lineHeight: 38,
     marginTop: -2,
   },
 });

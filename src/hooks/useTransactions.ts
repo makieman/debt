@@ -43,8 +43,9 @@ import { db } from '../db';
 
 interface UseTransactionsResult {
   transactions: Transaction[];
-  balance: number;      // in CENTS — use formatMoney() to display
-  loading: boolean;
+  balance: number;
+  loading: boolean;     // true only on the very first fetch
+  refreshing: boolean;  // true during subsequent refreshes
   error: string | null;
   refresh: () => void;
 }
@@ -54,7 +55,8 @@ interface UseTransactionsResult {
 export function useTransactions(customerId: number): UseTransactionsResult {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [balance, setBalance] = useState<number>(0);     // cents
-  const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // ── fetchAll ────────────────────────────────────────────────────────────────
@@ -65,8 +67,8 @@ export function useTransactions(customerId: number): UseTransactionsResult {
   //   created → useEffect re-runs → data refreshes for the new customer.
   const fetchAll = useCallback(async () => {
     try {
-      setLoading(true);
       setError(null);
+      setRefreshing(true);
 
       // Promise.all: both queries run in parallel, we get both results at once.
       // This is faster than awaiting them sequentially AND prevents the
@@ -93,7 +95,8 @@ export function useTransactions(customerId: number): UseTransactionsResult {
       // finally ALWAYS runs, even if catch fired. This guarantees that
       // loading goes false whether the fetch succeeded or failed.
       // Without this, a failed fetch would leave the spinner spinning forever.
-      setLoading(false);
+      setRefreshing(false);
+      setInitialLoad(false);
     }
   }, [customerId]); // re-create fetchAll only when customerId changes
 
@@ -105,7 +108,8 @@ export function useTransactions(customerId: number): UseTransactionsResult {
   return {
     transactions,
     balance,
-    loading,
+    loading: initialLoad,
+    refreshing,
     error,
     refresh: fetchAll,
   };

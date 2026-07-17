@@ -45,7 +45,8 @@ interface UseCustomersResult {
   customers: CustomerWithBalance[];
   totalOwed: number;
   totalPaid: number;
-  loading: boolean;
+  loading: boolean;     // true only on the very first fetch (no data yet)
+  refreshing: boolean;  // true on subsequent background refreshes
   error: Error | null;
   refresh: () => void;
 }
@@ -56,20 +57,17 @@ export function useCustomers(): UseCustomersResult {
   const [customers, setCustomers] = useState<CustomerWithBalance[]>([]);
   const [totalOwed, setTotalOwed] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
-  const [loading, setLoading] = useState(true);
+  // `initialLoad` is true only until the very first fetch finishes.
+  // `refreshing` is true during any subsequent refresh — it does NOT
+  // clear the existing list from the screen, preventing the glitch/flash.
+  const [initialLoad, setInitialLoad] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // ── fetchCustomers ──────────────────────────────────────────────────────────
-  // useCallback memoises this function so it has a stable reference between
-  // renders. If we defined it as a plain arrow function, it would be a new
-  // function object on every render — that matters because we put it in the
-  // useEffect dependency array below. A new function reference on every render
-  // would cause the effect to re-run on every render → infinite loop.
   const fetchCustomers = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null); // clear any previous error before retrying
-      // Fetch customers and dashboard totals in parallel for maximum efficiency
+      setError(null);
+      setRefreshing(true);
       const [rows, totals] = await Promise.all([
         getAllCustomersWithBalances(db),
         getDashboardTotals(db),
@@ -78,14 +76,12 @@ export function useCustomers(): UseCustomersResult {
       setTotalOwed(totals.totalOutstanding);
       setTotalPaid(totals.totalCollected);
     } catch (err) {
-      // Always store Error objects, never raw unknowns
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
-      // finally runs whether the try succeeded or the catch fired.
-      // This guarantees loading goes false even if there's an error.
-      setLoading(false);
+      setRefreshing(false);
+      setInitialLoad(false); // first fetch is done — never show full-screen spinner again
     }
-  }, []); // [] because getAllCustomersWithBalances, getDashboardTotals and db are module-level constants
+  }, []);
 
   // ── Effect: fetch on mount ──────────────────────────────────────────────────
   // This runs once when the hook is first used by a component.
@@ -102,7 +98,8 @@ export function useCustomers(): UseCustomersResult {
     customers,
     totalOwed,
     totalPaid,
-    loading,
+    loading: initialLoad,   // only true before the first data arrives
+    refreshing,             // true during background refreshes
     error,
     refresh: fetchCustomers,
   };

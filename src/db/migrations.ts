@@ -34,6 +34,14 @@ export async function runMigrations(db: SQLiteDatabase): Promise<void> {
     await db.withTransactionAsync(async () => {
       await db.execAsync(CREATE_CUSTOMERS_TABLE);
       await db.execAsync(CREATE_TRANSACTIONS_TABLE);
+
+      // Check if `isDeleted` column exists, add it if not
+      const tableInfo = await db.getAllAsync<{ name: string }>('PRAGMA table_info(customers);');
+      const hasDeletedColumn = tableInfo.some((col) => col.name === 'isDeleted');
+      if (!hasDeletedColumn) {
+        console.log('[migrations] Adding isDeleted column to customers table');
+        await db.execAsync('ALTER TABLE customers ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0;');
+      }
     });
 
     console.log('✅ Database ready');

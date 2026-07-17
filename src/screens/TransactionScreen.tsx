@@ -98,7 +98,9 @@ import { formatMoney } from '../utils/money';
 import { useTransactions } from '../hooks/useTransactions';
 import { TransactionRow } from '../components/TransactionRow';
 import { AddTransactionModal } from '../components/AddTransactionModal';
+import { EditCustomerModal } from '../components/EditCustomerModal';
 import { TransactionRouteProp, TransactionNavProp } from '../navigation/types';
+import { db } from '../db';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 //
@@ -125,12 +127,34 @@ export function TransactionScreen() {
   const navigation = useNavigation<TransactionNavProp>();
   const { customer } = route.params;
 
+  const [currentCustomer, setCurrentCustomer] = useState(customer);
+  const [showEditModal, setShowEditModal] = useState(false);
+
   // Data from hook — both transactions and balance fetched together
-  const { transactions, balance, loading, error, refresh } = useTransactions(customer.id);
+  const { transactions, balance, loading, refreshing, error, refresh } = useTransactions(customer.id);
 
   // Two independent modal booleans — see architecture note above
   const [showDebtModal, setShowDebtModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  const handleEditSuccess = useCallback((deleted?: boolean) => {
+    if (deleted) {
+      // Go back to the customer list
+      navigation.goBack();
+    } else {
+      // Fetch updated customer from SQLite
+      db.getFirstAsync<import('../types').Customer>(
+        'SELECT id, name, phone, createdAt FROM customers WHERE id = ?',
+        [customer.id]
+      ).then((updated: import('../types').Customer | null) => {
+        if (updated) {
+          setCurrentCustomer(updated);
+        }
+      }).catch((e: any) => {
+        console.error('Failed to fetch updated customer:', e);
+      });
+    }
+  }, [customer.id, navigation]);
 
   // ── Balance card config ────────────────────────────────────────────────────
   // Determines the color and label based on the balance value
@@ -263,18 +287,25 @@ export function TransactionScreen() {
 
         <View style={styles.headerCenter}>
           <Text style={styles.customerName} numberOfLines={1}>
-            {customer.name}
+            {currentCustomer.name}
           </Text>
-          {customer.phone && (
-            <Text style={styles.customerPhone}>{customer.phone}</Text>
-          )}
+          {currentCustomer.phone ? (
+            <Text style={styles.customerPhone}>{currentCustomer.phone}</Text>
+          ) : null}
         </View>
 
-        {/* Spacer to keep name centered */}
-        <View style={styles.backButton} />
+        {/* Edit button */}
+        <Pressable
+          onPress={() => setShowEditModal(true)}
+          style={styles.backButton}
+          accessibilityLabel={t('editCustomer')}
+          accessibilityRole="button"
+        >
+          <Ionicons name="create-outline" size={24} color={colors.text.primary} />
+        </Pressable>
       </View>
 
-      {/* ── Loading state ── */}
+      {/* ── Loading state (initial only) ── */}
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator color={colors.accent.teal} />
@@ -301,7 +332,7 @@ export function TransactionScreen() {
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
+            refreshing={refreshing}
             onRefresh={refresh}
             tintColor={colors.accent.teal}
             colors={[colors.accent.teal]}
@@ -326,6 +357,14 @@ export function TransactionScreen() {
         customerId={customer.id}
         onSuccess={handleTransactionSuccess}
         onClose={() => setShowPaymentModal(false)}
+      />
+
+      {/* ── Edit Customer modal ── */}
+      <EditCustomerModal
+        visible={showEditModal}
+        customer={currentCustomer}
+        onSuccess={handleEditSuccess}
+        onClose={() => setShowEditModal(false)}
       />
     </View>
   );

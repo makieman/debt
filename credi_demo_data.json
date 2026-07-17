@@ -1,0 +1,166 @@
+{
+  "customers": [
+    {
+      "name": "Kamau Njoroge",
+      "phone": "0712 345 678",
+      "transactions": [
+        {
+          "type": "debt",
+          "amountCents": 150000,
+          "note": "Unga 2kg, Sukari",
+          "createdAt": "2026-07-03T10:30:00.000Z"
+        },
+        {
+          "type": "debt",
+          "amountCents": 80000,
+          "note": "Mafuta, Chumvi",
+          "createdAt": "2026-07-05T12:15:00.000Z"
+        },
+        {
+          "type": "payment",
+          "amountCents": 50000,
+          "note": "Partial payment",
+          "createdAt": "2026-07-07T14:00:00.000Z"
+        },
+        {
+          "type": "debt",
+          "amountCents": 120000,
+          "note": "Mkate, Maziwa",
+          "createdAt": "2026-07-10T09:45:00.000Z"
+        },
+        {
+          "type": "payment",
+          "amountCents": 65000,
+          "note": "",
+          "createdAt": "2026-07-14T16:30:00.000Z"
+        }
+      ]
+    },
+    {
+      "name": "Wanjiku Muthoni",
+      "phone": "0723 456 789",
+      "transactions": [
+        {
+          "type": "debt",
+          "amountCents": 60000,
+          "note": "Sabuni, Pampers",
+          "createdAt": "2026-07-06T11:00:00.000Z"
+        },
+        {
+          "type": "debt",
+          "amountCents": 45000,
+          "note": "Soda 2, Juice",
+          "createdAt": "2026-07-08T15:20:00.000Z"
+        },
+        {
+          "type": "payment",
+          "amountCents": 20000,
+          "note": "Cash payment",
+          "createdAt": "2026-07-11T10:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "name": "Omondi Otieno",
+      "phone": "0734 567 890",
+      "transactions": [
+        {
+          "type": "debt",
+          "amountCents": 200000,
+          "note": "Wholesale unga",
+          "createdAt": "2026-07-04T08:30:00.000Z"
+        },
+        {
+          "type": "debt",
+          "amountCents": 180000,
+          "note": "Mafuta cooking",
+          "createdAt": "2026-07-09T13:45:00.000Z"
+        },
+        {
+          "type": "payment",
+          "amountCents": 70000,
+          "note": "",
+          "createdAt": "2026-07-12T17:15:00.000Z"
+        }
+      ]
+    },
+    {
+      "name": "Fatuma Hassan",
+      "phone": "0745 678 901",
+      "transactions": [
+        {
+          "type": "debt",
+          "amountCents": 90000,
+          "note": "Mkate, Maziwa daily",
+          "createdAt": "2026-07-07T09:00:00.000Z"
+        },
+        {
+          "type": "payment",
+          "amountCents": 90000,
+          "note": "Full payment asante",
+          "createdAt": "2026-07-13T12:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "name": "Mutua Kioko",
+      "phone": "0756 789 012",
+      "transactions": [
+        {
+          "type": "debt",
+          "amountCents": 50000,
+          "note": "Unga 1kg",
+          "createdAt": "2026-07-11T11:30:00.000Z"
+        }
+      ]
+    },
+    {
+      "name": "Akinyi Adhiambo",
+      "phone": "0767 890 123",
+      "transactions": [
+        {
+          "type": "debt",
+          "amountCents": 100000,
+          "note": "Monthly supplies",
+          "createdAt": "2026-07-08T10:00:00.000Z"
+        },
+        {
+          "type": "debt",
+          "amountCents": 75000,
+          "note": "Soda crate",
+          "createdAt": "2026-07-10T14:50:00.000Z"
+        }
+      ]
+    },
+    {
+      "name": "Njuguna Kariuki",
+      "phone": "0778 901 234",
+      "transactions": [
+        {
+          "type": "debt",
+          "amountCents": 20000,
+          "note": "Chumvi, Sukari",
+          "createdAt": "2026-07-14T11:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "name": "Zawadi Baraka",
+      "phone": null,
+      "transactions": [
+        {
+          "type": "debt",
+          "amountCents": 40000,
+          "note": "Uji flour",
+          "createdAt": "2026-07-09T08:30:00.000Z"
+        },
+        {
+          "type": "debt",
+          "amountCents": 25000,
+          "note": "Mandazi",
+          "createdAt": "2026-07-12T16:40:00.000Z"
+        }
+      ]
+    }
+  ]
+}

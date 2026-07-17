@@ -39,6 +39,7 @@ interface CustomerCardProps {
   customer: Customer;
   balance: number;
   onPress: () => void;
+  onLongPress?: () => void;
 }
 
 // ─── Helper: format KES amount ────────────────────────────────────────────────
@@ -49,7 +50,7 @@ function formatMoney(amount: number, currency: string = 'KES'): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function CustomerCard({ customer, balance, onPress }: CustomerCardProps) {
+export function CustomerCard({ customer, balance, onPress, onLongPress }: CustomerCardProps) {
   const { colors } = useThemeContext();
   const { profile } = useShopProfile();
   const currency = profile?.currency || 'KES';
@@ -62,6 +63,7 @@ export function CustomerCard({ customer, balance, onPress }: CustomerCardProps) 
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       style={({ pressed }) => [
         pressed && styles.cardPressed,
       ]}

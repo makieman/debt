@@ -58,27 +58,48 @@ export async function getAllCustomers(db: SQLiteDatabase): Promise<Customer[]> {
   const rows = await db.getAllAsync<Customer>(
     `SELECT id, name, phone, createdAt
      FROM customers
+     WHERE isDeleted = 0
      ORDER BY name ASC`
   );
   return rows;
 }
 
 /**
- * Deletes a customer and — via ON DELETE CASCADE — all their transactions.
+ * Updates an existing customer's details (name and phone number).
  *
- * This is why the FOREIGN KEY ... ON DELETE CASCADE in our schema matters:
- * we only delete one row here, but SQLite silently cleans up all associated
- * transaction rows automatically. No second DELETE statement needed.
+ * @param db      - The open SQLite database instance
+ * @param id      - The id of the customer to update
+ * @param updates - Object containing the new name and phone number
+ */
+export async function updateCustomer(
+  db: SQLiteDatabase,
+  id: number,
+  updates: { name: string; phone?: string | null }
+): Promise<void> {
+  await db.runAsync(
+    `UPDATE customers
+     SET name = ?, phone = ?
+     WHERE id = ?`,
+    [updates.name, updates.phone ?? null, id]
+  );
+}
+
+/**
+ * Soft-deletes a customer by setting isDeleted = 1.
+ * Their transactions remain in the database for consistency, but the customer
+ * is hidden from the UI.
  *
  * @param db - The open SQLite database instance
- * @param id - The id of the customer to delete
+ * @param id - The id of the customer to soft-delete
  */
 export async function deleteCustomer(
   db: SQLiteDatabase,
   id: number
 ): Promise<void> {
   await db.runAsync(
-    `DELETE FROM customers WHERE id = ?`,
+    `UPDATE customers
+     SET isDeleted = 1
+     WHERE id = ?`,
     [id]
   );
 }

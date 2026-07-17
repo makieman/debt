@@ -23,6 +23,7 @@ export const CREATE_CUSTOMERS_TABLE = `
     id        INTEGER PRIMARY KEY,
     name      TEXT    NOT NULL,
     phone     TEXT,
+    isDeleted INTEGER NOT NULL DEFAULT 0,
     createdAt TEXT    NOT NULL DEFAULT (datetime('now'))
   );
 `;

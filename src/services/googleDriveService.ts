@@ -106,11 +106,10 @@ export interface DriveUploadResult {
  */
 export async function connectGoogleDrive(): Promise<boolean> {
   try {
-    // Build the redirect URI — this must match what you registered in Google Cloud.
-    // For Expo, it follows the format: com.lightstorm.credi:/oauth2redirect
+    // Use Expo's proxy helper to redirect through https://auth.expo.io.
+    // This allows using a Web OAuth Client ID since Google requires redirect URIs to be HTTPS.
     const redirectUri = AuthSession.makeRedirectUri({
-      scheme: 'com.lightstorm.credi',
-      path: 'oauth2redirect',
+      native: 'https://auth.expo.io/@mano2.0/duka-deni',
     });
 
     // Create the auth request with PKCE

@@ -1,8 +1,9 @@
 /**
  * src/components/Numpad.tsx
  *
- * A custom full-width calculator-style numpad rendered directly in the UI.
- * Optimized with React.memo and instant touch feedback for zero input lag.
+ * Professional circular phone-dialer style numpad for Duka Deni.
+ * Features distinct circular key buttons with sub-letters, contrast framing,
+ * native ripples, and zero-lag memoization.
  */
 
 import React, { useCallback, useRef } from 'react';
@@ -11,7 +12,6 @@ import {
   Text,
   Pressable,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext, Colors } from '../theme';
@@ -29,11 +29,24 @@ const KEYS: string[][] = [
   ['.', '0', '⌫'],
 ];
 
-export function Numpad({ value, onChange, maxLength = 7 }: NumpadProps) {
-  const { colors } = useThemeContext();
-  const styles = makeStyles(colors);
+const KEY_SUB_LABELS: Record<string, string> = {
+  '1': '',
+  '2': 'ABC',
+  '3': 'DEF',
+  '4': 'GHI',
+  '5': 'JKL',
+  '6': 'MNO',
+  '7': 'PQRS',
+  '8': 'TUV',
+  '9': 'WXYZ',
+  '.': '',
+  '0': '+',
+};
 
-  // Keep a ref to the latest value to avoid recreating callbacks on every keystroke
+export function Numpad({ value, onChange, maxLength = 7 }: NumpadProps) {
+  const { colors, isDark } = useThemeContext();
+  const styles = makeStyles(colors, isDark);
+
   const valueRef = useRef(value);
   valueRef.current = value;
 
@@ -81,6 +94,7 @@ export function Numpad({ value, onChange, maxLength = 7 }: NumpadProps) {
             <NumpadKey
               key={key}
               label={key}
+              subLabel={KEY_SUB_LABELS[key]}
               onPress={handleKeyPress}
               isBackspace={key === '⌫'}
             />
@@ -93,17 +107,19 @@ export function Numpad({ value, onChange, maxLength = 7 }: NumpadProps) {
 
 interface NumpadKeyProps {
   label: string;
+  subLabel?: string;
   onPress: (key: string) => void;
   isBackspace: boolean;
 }
 
 const NumpadKey = React.memo(function NumpadKey({
   label,
+  subLabel,
   onPress,
   isBackspace,
 }: NumpadKeyProps) {
-  const { colors } = useThemeContext();
-  const styles = makeStyles(colors);
+  const { colors, isDark } = useThemeContext();
+  const styles = makeStyles(colors, isDark);
 
   const handlePress = useCallback(() => {
     onPress(label);
@@ -112,11 +128,15 @@ const NumpadKey = React.memo(function NumpadKey({
   return (
     <Pressable
       onPress={handlePress}
-      android_ripple={{ color: colors.background.tertiary, borderless: false }}
+      android_ripple={{
+        color: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)',
+        borderless: true,
+        radius: 34,
+      }}
       style={({ pressed }) => [
-        styles.keyTile,
-        isBackspace && styles.actionKeyTile,
-        label === '.' && styles.actionKeyTile,
+        styles.keyCircle,
+        isBackspace && styles.actionKeyCircle,
+        label === '.' && styles.actionKeyCircle,
         pressed && styles.keyPressed,
       ]}
       accessibilityLabel={isBackspace ? 'backspace' : label}
@@ -125,64 +145,75 @@ const NumpadKey = React.memo(function NumpadKey({
       {isBackspace ? (
         <Ionicons name="backspace-outline" size={26} color={colors.text.primary} />
       ) : (
-        <Text style={[styles.keyLabel, label === '.' && styles.dotLabel]}>
-          {label}
-        </Text>
+        <View style={styles.keyTextCol}>
+          <Text style={[styles.keyLabel, label === '.' && styles.dotLabel]}>
+            {label}
+          </Text>
+          {Boolean(subLabel) && (
+            <Text style={styles.subLabel}>{subLabel}</Text>
+          )}
+        </View>
       )}
     </Pressable>
   );
 });
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const makeStyles = (colors: Colors) =>
+const makeStyles = (colors: Colors, isDark: boolean) =>
   StyleSheet.create({
     container: {
       width: '100%',
-      maxWidth: 340,
+      maxWidth: 320,
       alignSelf: 'center',
-      paddingVertical: 8,
+      paddingVertical: 12,
     },
     row: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      gap: 12,
-      marginBottom: 12,
+      justifyContent: 'space-around',
+      alignItems: 'center',
+      marginBottom: 16,
     },
-    keyTile: {
-      flex: 1,
-      height: 58,
-      borderRadius: 16,
-      backgroundColor: colors.background.secondary,
+    keyCircle: {
+      width: 68,
+      height: 68,
+      borderRadius: 34,
+      backgroundColor: isDark ? '#263143' : '#F1F5F9',
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: colors.background.tertiary,
-      // Subtle depth shadow
+      borderWidth: 1.5,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 2,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.25,
+      shadowRadius: 5,
+      elevation: 4,
     },
-    actionKeyTile: {
-      backgroundColor: colors.background.secondary,
-      opacity: 0.9,
+    actionKeyCircle: {
+      backgroundColor: isDark ? '#1E2736' : '#E2E8F0',
     },
     keyPressed: {
-      backgroundColor: colors.background.tertiary,
-      transform: [{ scale: 0.96 }],
-      opacity: 0.85,
+      backgroundColor: isDark ? '#3B4A63' : '#CBD5E1',
+      transform: [{ scale: 0.93 }],
+    },
+    keyTextCol: {
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     keyLabel: {
-      fontSize: 26,
+      fontSize: 25,
       fontWeight: '600',
       color: colors.text.primary,
-      textAlign: 'center',
+      lineHeight: 28,
     },
     dotLabel: {
-      fontSize: 30,
+      fontSize: 28,
       fontWeight: '800',
-      lineHeight: 30,
+      lineHeight: 28,
+    },
+    subLabel: {
+      fontSize: 9,
+      fontWeight: '700',
+      color: colors.text.muted,
+      letterSpacing: 1.2,
+      marginTop: -2,
     },
   });

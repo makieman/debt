@@ -1,24 +1,11 @@
 /**
  * src/components/Numpad.tsx
  *
- * A custom full-width calculator-style numpad rendered directly in the UI
- * (not the system keyboard). Used for amount entry in AddTransactionModal.
- *
- * WHY A STRING FOR VALUE, NOT A NUMBER?
- * The user is building a number character-by-character. Intermediate states
- * like "150." (after typing a decimal point, before any decimal digit) cannot
- * be stored as a JavaScript number — Number("150.") === 150, the dot is lost.
- * We need the raw string at all times to render what the user typed exactly.
- * Conversion to a real number only happens when the user confirms the amount.
- *
- * WHY NOT THE SYSTEM KEYBOARD?
- * 1. The system numeric keyboard layout varies across Android versions.
- * 2. We get complete control over validation (one dot, no leading zeros).
- * 3. No keyboard slide-up animation — numpad is always visible in the modal.
- * 4. Large keys are easier to tap for shopkeepers in a busy environment.
+ * A custom full-width calculator-style numpad rendered directly in the UI.
+ * Optimized with React.memo and instant touch feedback for zero input lag.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,9 +13,8 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext, Colors } from '../theme';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface NumpadProps {
   value: string;
@@ -36,10 +22,6 @@ interface NumpadProps {
   maxLength?: number; // default 7 → "99999.99" KES max
 }
 
-// ─── Key layout ──────────────────────────────────────────────────────────────
-
-// The numpad layout as a 2D array. Each inner array is one row.
-// '⌫' triggers backspace logic. '.' inserts a decimal point.
 const KEYS: string[][] = [
   ['1', '2', '3'],
   ['4', '5', '6'],
@@ -47,60 +29,49 @@ const KEYS: string[][] = [
   ['.', '0', '⌫'],
 ];
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export function Numpad({ value, onChange, maxLength = 7 }: NumpadProps) {
   const { colors } = useThemeContext();
   const styles = makeStyles(colors);
 
-  /**
-   * handleKey processes every key press with the full validation logic.
-   *
-   * useCallback is used here because this function is passed as an `onPress`
-   * prop to every Pressable key. Without useCallback, a new function object
-   * is created on each render, causing all 12 key Pressables to re-render
-   * (minor performance hit, but good habit for frequently-rendered lists).
-   */
-  const handleKey = useCallback((key: string) => {
-    if (key === '⌫') {
-      // Backspace: remove the last character
-      // If value becomes empty after backspace, leave it empty (not "0")
-      onChange(value.slice(0, -1));
-      return;
-    }
+  // Keep a ref to the latest value to avoid recreating callbacks on every keystroke
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
-    if (key === '.') {
-      // Only one decimal point allowed
-      if (value.includes('.')) return;
-      // Tapping '.' on empty value → insert "0." so we get "0.50" not ".50"
-      if (value === '' || value === '0') {
-        onChange('0.');
+  const handleKeyPress = useCallback(
+    (key: string) => {
+      const current = valueRef.current;
+
+      if (key === '⌫') {
+        onChange(current.slice(0, -1));
         return;
       }
-      onChange(value + '.');
-      return;
-    }
 
-    // --- Digit key pressed ---
+      if (key === '.') {
+        if (current.includes('.')) return;
+        if (current === '' || current === '0') {
+          onChange('0.');
+          return;
+        }
+        onChange(current + '.');
+        return;
+      }
 
-    // Enforce max length (count only digit characters, not the dot)
-    const digits = value.replace('.', '');
-    if (digits.length >= maxLength) return;
+      // Digit handling
+      const digits = current.replace('.', '');
+      if (digits.length >= maxLength) return;
 
-    // No leading zeros: if current value is "0" and user types a digit,
-    // REPLACE "0" with the new digit rather than appending ("05" → "5")
-    if (value === '0' && key !== '.') {
-      onChange(key);
-      return;
-    }
+      if (current === '0' && key !== '.') {
+        onChange(key);
+        return;
+      }
 
-    // Enforce max 2 decimal places: if there's already a dot and 2 digits
-    // after it, ignore the key press
-    const dotIndex = value.indexOf('.');
-    if (dotIndex !== -1 && value.length - dotIndex > 2) return;
+      const dotIndex = current.indexOf('.');
+      if (dotIndex !== -1 && current.length - dotIndex > 2) return;
 
-    onChange(value + key);
-  }, [value, onChange, maxLength]);
+      onChange(current + key);
+    },
+    [onChange, maxLength]
+  );
 
   return (
     <View style={styles.container}>
@@ -110,7 +81,7 @@ export function Numpad({ value, onChange, maxLength = 7 }: NumpadProps) {
             <NumpadKey
               key={key}
               label={key}
-              onPress={() => handleKey(key)}
+              onPress={handleKeyPress}
               isBackspace={key === '⌫'}
             />
           ))}
@@ -120,76 +91,98 @@ export function Numpad({ value, onChange, maxLength = 7 }: NumpadProps) {
   );
 }
 
-// ─── Individual Key ───────────────────────────────────────────────────────────
-
-/**
- * NumpadKey renders a single pressable key.
- *
- * We use Pressable (not TouchableOpacity) because Pressable gives us
- * fine-grained control over the pressed state via its `style` prop function.
- * style={({ pressed }) => [base, pressed && overrideStyle]} lets us change
- * the background color on press without any animation library.
- */
 interface NumpadKeyProps {
   label: string;
-  onPress: () => void;
+  onPress: (key: string) => void;
   isBackspace: boolean;
 }
 
-function NumpadKey({ label, onPress, isBackspace }: NumpadKeyProps) {
+const NumpadKey = React.memo(function NumpadKey({
+  label,
+  onPress,
+  isBackspace,
+}: NumpadKeyProps) {
   const { colors } = useThemeContext();
   const styles = makeStyles(colors);
 
+  const handlePress = useCallback(() => {
+    onPress(label);
+  }, [label, onPress]);
+
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
+      android_ripple={{ color: colors.background.tertiary, borderless: false }}
       style={({ pressed }) => [
-        styles.key,
+        styles.keyTile,
+        isBackspace && styles.actionKeyTile,
+        label === '.' && styles.actionKeyTile,
         pressed && styles.keyPressed,
       ]}
       accessibilityLabel={isBackspace ? 'backspace' : label}
       accessibilityRole="button"
     >
-      <Text style={[styles.keyLabel, isBackspace && styles.backspaceLabel]}>
-        {label}
-      </Text>
+      {isBackspace ? (
+        <Ionicons name="backspace-outline" size={26} color={colors.text.primary} />
+      ) : (
+        <Text style={[styles.keyLabel, label === '.' && styles.dotLabel]}>
+          {label}
+        </Text>
+      )}
     </Pressable>
   );
-}
-
-// ─── Styles ──────────────────────────────────────────────────────────────────
+});
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const makeStyles = (colors: Colors) => StyleSheet.create({
-  container: {
-    width: '100%',
-    maxWidth: 280,
-    alignSelf: 'center',
-    paddingVertical: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 32, // wide vertical spacing
-  },
-  key: {
-    flex: 1, // evenly space across the row
-    height: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  keyPressed: {
-    opacity: 0.5, // simple opacity instead of background pop
-  },
-  keyLabel: {
-    fontSize: 36, // prominent text
-    color: colors.text.primary,
-    fontWeight: '400',
-    textAlign: 'center',
-  },
-  backspaceLabel: {
-    fontSize: 28,             
-    color: colors.text.secondary,
-  },
-});
+const makeStyles = (colors: Colors) =>
+  StyleSheet.create({
+    container: {
+      width: '100%',
+      maxWidth: 340,
+      alignSelf: 'center',
+      paddingVertical: 8,
+    },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: 12,
+      marginBottom: 12,
+    },
+    keyTile: {
+      flex: 1,
+      height: 58,
+      borderRadius: 16,
+      backgroundColor: colors.background.secondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.background.tertiary,
+      // Subtle depth shadow
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    actionKeyTile: {
+      backgroundColor: colors.background.secondary,
+      opacity: 0.9,
+    },
+    keyPressed: {
+      backgroundColor: colors.background.tertiary,
+      transform: [{ scale: 0.96 }],
+      opacity: 0.85,
+    },
+    keyLabel: {
+      fontSize: 26,
+      fontWeight: '600',
+      color: colors.text.primary,
+      textAlign: 'center',
+    },
+    dotLabel: {
+      fontSize: 30,
+      fontWeight: '800',
+      lineHeight: 30,
+    },
+  });

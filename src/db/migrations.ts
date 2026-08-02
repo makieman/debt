@@ -11,7 +11,12 @@
  */
 
 import { SQLiteDatabase } from 'expo-sqlite';
-import { CREATE_CUSTOMERS_TABLE, CREATE_TRANSACTIONS_TABLE } from './schema';
+import {
+  CREATE_CUSTOMERS_TABLE,
+  CREATE_TRANSACTIONS_TABLE,
+  CREATE_DAILY_SUMMARIES_TABLE,
+  CREATE_DAILY_EXPENSES_TABLE,
+} from './schema';
 
 /**
  * Runs all database setup statements.
@@ -34,6 +39,8 @@ export async function runMigrations(db: SQLiteDatabase): Promise<void> {
     await db.withTransactionAsync(async () => {
       await db.execAsync(CREATE_CUSTOMERS_TABLE);
       await db.execAsync(CREATE_TRANSACTIONS_TABLE);
+      await db.execAsync(CREATE_DAILY_SUMMARIES_TABLE);
+      await db.execAsync(CREATE_DAILY_EXPENSES_TABLE);
 
       // Check if `isDeleted` column exists, add it if not
       const tableInfo = await db.getAllAsync<{ name: string }>('PRAGMA table_info(customers);');

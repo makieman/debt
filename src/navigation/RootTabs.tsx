@@ -52,12 +52,15 @@ import { RootTabParamList } from './types';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import CustomersStack from './CustomersStack';
+import SalesStack from './SalesStack';
 import { useThemeContext } from '../theme';
+import { useLanguage } from '../store/LanguageContext';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
 export default function RootTabs() {
   const { colors } = useThemeContext();
+  const { t } = useLanguage();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -91,9 +94,6 @@ export default function RootTabs() {
         component={DashboardScreen}
         options={{
           tabBarLabel: 'Dashboard',
-          // tabBarIcon receives `focused` (boolean) and `color` (already the
-          // correct active/inactive tint color based on tabBarActiveTintColor).
-          // Convention: filled icon when active, outline when inactive.
           tabBarIcon: ({ focused, color }) => (
             <Ionicons
               name={focused ? 'grid' : 'grid-outline'}
@@ -105,17 +105,11 @@ export default function RootTabs() {
       />
 
       {/* ── Tab 2: Customers → CustomersStack ────────────────────────────── */}
-      {/*
-       * We register CustomersStack (a navigator component) as the screen
-       * for the "Customers" tab. React Navigation renders it as a nested
-       * navigator — the tab bar handles tab switching, the stack handles
-       * pushing/popping CustomerList ↔ Transaction.
-       */}
       <Tab.Screen
         name="Customers"
         component={CustomersStack}
         options={{
-          tabBarLabel: 'Customers',
+          tabBarLabel: t('customers') || 'Customers',
           tabBarIcon: ({ focused, color }) => (
             <Ionicons
               name={focused ? 'people' : 'people-outline'}
@@ -126,17 +120,28 @@ export default function RootTabs() {
         }}
       />
 
-      {/* ── Tab 3: Settings ───────────────────────────────────────────────── */}
-      {/*
-       * Settings is always the rightmost tab — universal mobile convention.
-       * WhatsApp, Instagram, Gmail all follow this. Users find Settings on the
-       * right without thinking. Breaking this convention creates friction.
-       */}
+      {/* ── Tab 3: Sales → SalesStack ────────────────────────────────────── */}
+      <Tab.Screen
+        name="Sales"
+        component={SalesStack}
+        options={{
+          tabBarLabel: t('sales') || 'Sales',
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons
+              name={focused ? 'trending-up' : 'trending-up-outline'}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* ── Tab 4: Settings ───────────────────────────────────────────────── */}
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}
         options={{
-          tabBarLabel: 'Settings',
+          tabBarLabel: t('settings') || 'Settings',
           tabBarIcon: ({ focused, color }) => (
             <Ionicons
               name={focused ? 'settings' : 'settings-outline'}

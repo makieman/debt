@@ -129,3 +129,89 @@ export interface DailyTotal {
 export interface CustomerWithBalance extends Customer {
   balance: number; // in cents. 0 = settled. > 0 = owes money.
 }
+
+// ─── Daily Sales Ledger Types ──────────────────────────────────────────────────
+
+export type ExpenseCategory =
+  | 'stock'
+  | 'rent'
+  | 'transport'
+  | 'salary'
+  | 'utilities'
+  | 'other'
+  | 'custom';
+
+export interface DailySummary {
+  id: number;
+  date: string;               // "YYYY-MM-DD"
+  cashSales: number;          // cents
+  mpesaSales: number;         // cents
+  creditIssued: number;       // cents
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DailyExpense {
+  id: number;
+  summaryId: number;
+  category: ExpenseCategory;
+  customCategory: string | null;
+  amount: number;             // cents
+  note: string | null;
+  createdAt: string;
+}
+
+export interface DailySummaryWithExpenses extends DailySummary {
+  expenses: DailyExpense[];
+  totalExpenses: number;      // cents, sum of all expenses
+  totalRevenue: number;       // cashSales + mpesaSales + creditIssued
+  profit: number;             // totalRevenue - totalExpenses
+}
+
+export interface NewDailySummary {
+  date: string;
+  cashSales: number;
+  mpesaSales: number;
+  creditIssued: number;
+  notes?: string;
+}
+
+export interface NewDailyExpense {
+  summaryId: number;
+  category: ExpenseCategory;
+  customCategory?: string;
+  amount: number;
+  note?: string;
+}
+
+export interface ReportTotals {
+  totalCashSales: number;
+  totalMpesaSales: number;
+  totalCreditIssued: number;
+  totalRevenue: number;
+  totalExpenses: number;
+  profit: number;
+  dayCount: number;
+  expenseBreakdown: Record<ExpenseCategory, number>;
+}
+
+export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
+  'stock',
+  'rent',
+  'transport',
+  'salary',
+  'utilities',
+  'other',
+  'custom',
+];
+
+export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
+  stock: 'Stock / Inventory',
+  rent: 'Rent',
+  transport: 'Transport',
+  salary: 'Salary / Wages',
+  utilities: 'Utilities (Water, Power)',
+  other: 'Other',
+  custom: 'Custom',
+};

@@ -53,3 +53,45 @@ export const CREATE_TRANSACTIONS_TABLE = `
     FOREIGN KEY (customerId) REFERENCES customers(id) ON DELETE CASCADE
   );
 `;
+
+/**
+ * The `daily_summaries` table.
+ *
+ * Notes:
+ * - `date` stores "YYYY-MM-DD" as TEXT. Enforces UNIQUE (one entry per calendar day).
+ * - `cashSales`, `mpesaSales`, `creditIssued` stored in INTEGER CENTS.
+ */
+export const CREATE_DAILY_SUMMARIES_TABLE = `
+  CREATE TABLE IF NOT EXISTS daily_summaries (
+    id           INTEGER PRIMARY KEY,
+    date         TEXT    NOT NULL UNIQUE,
+    cashSales    INTEGER NOT NULL DEFAULT 0,
+    mpesaSales   INTEGER NOT NULL DEFAULT 0,
+    creditIssued INTEGER NOT NULL DEFAULT 0,
+    notes        TEXT,
+    createdAt    TEXT    NOT NULL,
+    updatedAt    TEXT    NOT NULL
+  );
+`;
+
+/**
+ * The `daily_expenses` table.
+ *
+ * Notes:
+ * - `summaryId` references daily_summaries(id) with ON DELETE CASCADE.
+ * - `category` is restricted via CHECK constraint.
+ * - `amount` stored in INTEGER CENTS.
+ */
+export const CREATE_DAILY_EXPENSES_TABLE = `
+  CREATE TABLE IF NOT EXISTS daily_expenses (
+    id             INTEGER PRIMARY KEY,
+    summaryId      INTEGER NOT NULL,
+    category       TEXT    NOT NULL CHECK(category IN ('stock', 'rent', 'transport', 'salary', 'utilities', 'other', 'custom')),
+    customCategory TEXT,
+    amount         INTEGER NOT NULL,
+    note           TEXT,
+    createdAt      TEXT    NOT NULL,
+
+    FOREIGN KEY (summaryId) REFERENCES daily_summaries(id) ON DELETE CASCADE
+  );
+`;

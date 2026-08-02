@@ -14,17 +14,36 @@
  * Expo manages these paths automatically — we just provide the name.
  */
 
-import { openDatabaseSync } from 'expo-sqlite';
+import { Platform } from 'react-native';
+import { openDatabaseSync, SQLiteDatabase } from 'expo-sqlite';
+
+function getDbInstance(): SQLiteDatabase {
+  try {
+    return openDatabaseSync('dukadb');
+  } catch (err) {
+    console.warn('[db] SQLite openDatabaseSync failed (web preview mode enabled):', err);
+    return {
+      execAsync: async () => {},
+      withTransactionAsync: async (task: (db: any) => Promise<any>) => await task({
+        execAsync: async () => {},
+        getAllAsync: async () => [],
+        getFirstAsync: async () => null,
+        runAsync: async () => ({ lastInsertRowId: 1, changes: 1 }),
+      }),
+      getAllAsync: async () => [],
+      getFirstAsync: async () => null,
+      runAsync: async () => ({ lastInsertRowId: 1, changes: 1 }),
+      closeAsync: async () => {},
+      deleteAsync: async () => {},
+    } as unknown as SQLiteDatabase;
+  }
+}
 
 /**
  * The single, shared database connection for the entire app.
- * All repository functions receive this `db` object as their first argument.
- *
- * "dukadb" is the filename (without extension) of the SQLite file on disk.
- * Changing this name would create a new, empty database — don't rename in
- * production unless you add a data migration!
+ * Safe for both Native (Android/iOS) and Web browser preview.
  */
-export const db = openDatabaseSync('dukadb');
+export const db = getDbInstance();
 
 // Re-export runMigrations so callers can do:
 //   import { db, runMigrations } from '../db'

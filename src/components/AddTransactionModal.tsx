@@ -47,9 +47,13 @@ import { useLanguage } from '../store/LanguageContext';
 import { Numpad } from './Numpad';
 import { toCents, formatMoney } from '../utils/money';
 import { addTransaction } from '../repositories/transactions';
+import {
+  getTodayDateString,
+  getOrCreateTodaySummary,
+  getCreditIssuedToday,
+  upsertDailySummary,
+} from '../repositories/dailySummary';
 import { db } from '../db';
-import { TransactionType } from '../types';
-import { playPaymentSound, isSoundEnabled } from '../utils/sound';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -82,29 +86,17 @@ export function AddTransactionModal({
   const [saving, setSaving] = useState(false);
 
   // ── Derived values ─────────────────────────────────────────────────────────
-  // These are computed from state on every render. No useState needed —
-  // they're always in sync with numpadValue.
 
-  // Parse the string input into a float. Empty string → 0.
   const parsedAmount = numpadValue === '' ? 0 : parseFloat(numpadValue);
-
-  // Amount in cents for DB storage
   const amountInCents = toCents(parsedAmount);
-
-  // Is the amount valid and non-zero? Used to enable/disable the confirm button.
   const isValid = amountInCents > 0;
 
-  // Display string for the hero amount: format whatever the user has typed
-  // "KES 0.00" when empty, "KES 150.00" as they type
   const displayAmount = (() => {
     if (numpadValue === '' || numpadValue === '0') return `${currency} 0.00`;
-    // While typing (e.g. "150."), show the raw input with currency prefix
-    // so the user sees exactly what they've typed
     if (numpadValue.endsWith('.')) return `${currency} ${numpadValue}`;
     return formatMoney(amountInCents, currency);
   })();
 
-  // ── Color logic ────────────────────────────────────────────────────────────
   const accentColor = type === 'debt' ? colors.debt : colors.payment;
   const title = type === 'debt' ? t('addDebt') : t('recordPayment');
   const buttonLabel = type === 'debt' ? t('recordDebt') : t('recordPayment');
@@ -122,8 +114,25 @@ export function AddTransactionModal({
         type,
         amount: amountInCents,    // ← integer cents, never floats
         note: note.trim() || undefined,
-        // createdAt is set inside addTransaction using new Date().toISOString()
       });
+
+      // Sync creditIssued on daily summary if debt transaction
+      if (type === 'debt') {
+        try {
+          const today = getTodayDateString();
+          const existing = await getOrCreateTodaySummary(db, today);
+          const todayCredit = await getCreditIssuedToday(db, today);
+          await upsertDailySummary(db, {
+            date: today,
+            cashSales: existing.cashSales,
+            mpesaSales: existing.mpesaSales,
+            creditIssued: todayCredit,
+            notes: existing.notes ?? undefined,
+          });
+        } catch (err) {
+          console.warn('[AddTransactionModal] Failed to sync creditIssued to daily summary:', err);
+        }
+      }
 
       // 1. Notify parent FIRST so the data refresh starts immediately
       onSuccess();

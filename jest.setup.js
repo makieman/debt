@@ -41,18 +41,17 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
-// Mock expo-av for native audio playback testing
-jest.mock('expo-av', () => ({
-  Audio: {
-    Sound: {
-      createAsync: jest.fn().mockResolvedValue({
-        sound: {
-          setOnPlaybackStatusUpdate: jest.fn(),
-          unloadAsync: jest.fn(),
-        },
-      }),
-    },
-  },
+// Mock expo-audio for native audio playback testing
+jest.mock('expo-audio', () => ({
+  createAudioPlayer: jest.fn().mockReturnValue({
+    play: jest.fn(),
+    pause: jest.fn(),
+    remove: jest.fn(),
+  }),
+  useAudioPlayer: jest.fn().mockReturnValue({
+    play: jest.fn(),
+    pause: jest.fn(),
+  }),
 }));
 
 /**

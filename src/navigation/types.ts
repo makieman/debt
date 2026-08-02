@@ -57,15 +57,17 @@ export type CustomersStackParamList = {
   Transaction: { customer: Customer }; // Must have a customer object
 };
 
+export type SalesStackParamList = {
+  SalesHome: undefined;
+  DailyEntry: { date?: string };
+};
+
 // ─── Root Tab Navigator ───────────────────────────────────────────────────────
-//
-// This ParamList defines every tab in the root BottomTab navigator.
-// Both tabs take no params (undefined) — you switch to them without any data.
-// The "Customers" tab renders a Stack Navigator, not a screen directly.
 
 export type RootTabParamList = {
   Dashboard: undefined;
   Customers: undefined;
+  Sales: undefined;
   Settings: undefined;
 };
 

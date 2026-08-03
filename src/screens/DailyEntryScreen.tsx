@@ -50,7 +50,6 @@ export function DailyEntryScreen() {
 
   // Active Numpad editing state
   const [activeField, setActiveField] = useState<'cash' | 'mpesa' | 'credit' | null>(null);
-  const [numpadValue, setNumpadValue] = useState('');
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [notesText, setNotesText] = useState('');
   const [savedBadgeVisible, setSavedBadgeVisible] = useState(false);
@@ -80,26 +79,16 @@ export function DailyEntryScreen() {
 
   const openNumpad = (field: 'cash' | 'mpesa' | 'credit') => {
     setActiveField(field);
-    if (summary) {
-      const currentCents =
-        field === 'cash'
-          ? summary.cashSales
-          : field === 'mpesa'
-          ? summary.mpesaSales
-          : summary.creditIssued;
-      setNumpadValue(currentCents > 0 ? (currentCents / 100).toString() : '');
-    }
   };
 
-  const handleNumpadConfirm = () => {
-    if (!activeField || !summary) return;
-    const cents = toCents(numpadValue);
+  const handleNumpadConfirm = (field: 'cash' | 'mpesa' | 'credit', cents: number) => {
+    if (!summary) return;
 
-    if (activeField === 'cash') {
+    if (field === 'cash') {
       triggerAutoSave({ cashSales: cents });
-    } else if (activeField === 'mpesa') {
+    } else if (field === 'mpesa') {
       triggerAutoSave({ mpesaSales: cents });
-    } else if (activeField === 'credit') {
+    } else if (field === 'credit') {
       setIsCreditEdited(true);
       triggerAutoSave({ creditIssued: cents });
     }
@@ -298,34 +287,18 @@ export function DailyEntryScreen() {
       </ScrollView>
 
       {/* Numpad Modal */}
-      <Modal visible={activeField !== null} transparent animationType="slide">
-        <Pressable style={styles.modalBackdrop} onPress={() => setActiveField(null)} />
-        <View style={styles.numpadSheet}>
-          <View style={styles.sheetHandle} />
-
-          <View style={styles.numpadHeader}>
-            <Text style={styles.numpadTitle}>
-              {activeField === 'cash'
-                ? t('cashSales')
-                : activeField === 'mpesa'
-                ? t('mpesaSales')
-                : t('creditIssued')}
-            </Text>
-            <Pressable onPress={handleNumpadConfirm} style={styles.confirmBtn}>
-              <Text style={styles.confirmBtnText}>{t('save')}</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.numpadDisplay}>
-            <Text style={styles.numpadCurrency}>KES</Text>
-            <Text style={styles.numpadAmount}>
-              {numpadValue ? formatMoney(toCents(numpadValue), '') : '0.00'}
-            </Text>
-          </View>
-
-          <Numpad value={numpadValue} onChange={setNumpadValue} maxLength={7} />
-        </View>
-      </Modal>
+      <DailyNumpadModal
+        activeField={activeField}
+        initialCents={
+          activeField === 'cash'
+            ? summary.cashSales
+            : activeField === 'mpesa'
+            ? summary.mpesaSales
+            : summary.creditIssued
+        }
+        onConfirm={handleNumpadConfirm}
+        onClose={() => setActiveField(null)}
+      />
 
       {/* Add Expense Sheet */}
       <AddExpenseSheet
@@ -336,6 +309,69 @@ export function DailyEntryScreen() {
     </SafeAreaView>
   );
 }
+
+interface DailyNumpadModalProps {
+  activeField: 'cash' | 'mpesa' | 'credit' | null;
+  initialCents: number;
+  onConfirm: (field: 'cash' | 'mpesa' | 'credit', cents: number) => void;
+  onClose: () => void;
+}
+
+const DailyNumpadModal = React.memo(function DailyNumpadModal({
+  activeField,
+  initialCents,
+  onConfirm,
+  onClose,
+}: DailyNumpadModalProps) {
+  const { colors } = useThemeContext();
+  const { t } = useLanguage();
+  const styles = makeStyles(colors);
+
+  const [numpadValue, setNumpadValue] = useState('');
+
+  useEffect(() => {
+    if (activeField !== null) {
+      setNumpadValue(initialCents > 0 ? (initialCents / 100).toString() : '');
+    }
+  }, [activeField, initialCents]);
+
+  if (activeField === null) return null;
+
+  const handleConfirm = () => {
+    onConfirm(activeField, toCents(numpadValue));
+  };
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.modalBackdrop} onPress={onClose} />
+      <View style={styles.numpadSheet}>
+        <View style={styles.sheetHandle} />
+
+        <View style={styles.numpadHeader}>
+          <Text style={styles.numpadTitle}>
+            {activeField === 'cash'
+              ? t('cashSales')
+              : activeField === 'mpesa'
+              ? t('mpesaSales')
+              : t('creditIssued')}
+          </Text>
+          <Pressable onPress={handleConfirm} style={styles.confirmBtn}>
+            <Text style={styles.confirmBtnText}>{t('save')}</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.numpadDisplay}>
+          <Text style={styles.numpadCurrency}>KES</Text>
+          <Text style={styles.numpadAmount}>
+            {numpadValue ? formatMoney(toCents(numpadValue), '') : '0.00'}
+          </Text>
+        </View>
+
+        <Numpad value={numpadValue} onChange={setNumpadValue} maxLength={7} />
+      </View>
+    </Modal>
+  );
+});
 
 const makeStyles = (colors: Colors) =>
   StyleSheet.create({

@@ -101,6 +101,10 @@ export function AddTransactionModal({
   const title = type === 'debt' ? t('addDebt') : t('recordPayment');
   const buttonLabel = type === 'debt' ? t('recordDebt') : t('recordPayment');
 
+  const handleNumpadChange = useCallback((val: string) => {
+    setNumpadValue(val);
+  }, []);
+
   // ── handleConfirm ──────────────────────────────────────────────────────────
   const handleConfirm = useCallback(async () => {
     if (!isValid || saving) return;
@@ -204,7 +208,7 @@ export function AddTransactionModal({
           {/* Numpad */}
           <Numpad
             value={numpadValue}
-            onChange={setNumpadValue}
+            onChange={handleNumpadChange}
             maxLength={7}
           />
 

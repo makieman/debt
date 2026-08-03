@@ -44,6 +44,10 @@ export function AddExpenseSheet({ visible, onAdd, onClose }: AddExpenseSheetProp
   const [numpadValue, setNumpadValue] = useState('');
   const [note, setNote] = useState('');
 
+  const handleNumpadChange = useCallback((val: string) => {
+    setNumpadValue(val);
+  }, []);
+
   const amountCents = toCents(numpadValue);
   const isValid = amountCents > 0 && (category !== 'custom' || customCategory.trim().length > 0);
 
@@ -156,7 +160,7 @@ export function AddExpenseSheet({ visible, onAdd, onClose }: AddExpenseSheetProp
             </View>
 
             {/* Numpad */}
-            <Numpad value={numpadValue} onChange={setNumpadValue} maxLength={7} />
+            <Numpad value={numpadValue} onChange={handleNumpadChange} maxLength={7} />
 
             {/* Note field */}
             <Text style={styles.sectionLabel}>{t('expenseNote')}</Text>

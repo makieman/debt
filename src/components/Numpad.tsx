@@ -1,9 +1,8 @@
 /**
  * src/components/Numpad.tsx
  *
- * Professional circular phone-dialer style numpad for Duka Deni.
- * Features distinct circular key buttons with sub-letters, contrast framing,
- * native ripples, and zero-lag memoization.
+ * Professional circular phone-dialer style numpad for Credi.
+ * Optimized with custom React.memo comparator for 0ms tap latency.
  */
 
 import React, { useCallback, useRef } from 'react';
@@ -112,51 +111,52 @@ interface NumpadKeyProps {
   isBackspace: boolean;
 }
 
-const NumpadKey = React.memo(function NumpadKey({
-  label,
-  subLabel,
-  onPress,
-  isBackspace,
-}: NumpadKeyProps) {
-  const { colors, isDark } = useThemeContext();
-  const styles = makeStyles(colors, isDark);
+const NumpadKey = React.memo(
+  function NumpadKey({ label, subLabel, onPress, isBackspace }: NumpadKeyProps) {
+    const { colors, isDark } = useThemeContext();
+    const styles = makeStyles(colors, isDark);
 
-  const handlePress = useCallback(() => {
-    onPress(label);
-  }, [label, onPress]);
+    const handlePress = useCallback(() => {
+      onPress(label);
+    }, [label, onPress]);
 
-  return (
-    <Pressable
-      onPress={handlePress}
-      android_ripple={{
-        color: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)',
-        borderless: true,
-        radius: 34,
-      }}
-      style={({ pressed }) => [
-        styles.keyCircle,
-        isBackspace && styles.actionKeyCircle,
-        label === '.' && styles.actionKeyCircle,
-        pressed && styles.keyPressed,
-      ]}
-      accessibilityLabel={isBackspace ? 'backspace' : label}
-      accessibilityRole="button"
-    >
-      {isBackspace ? (
-        <Ionicons name="backspace-outline" size={26} color={colors.text.primary} />
-      ) : (
-        <View style={styles.keyTextCol}>
-          <Text style={[styles.keyLabel, label === '.' && styles.dotLabel]}>
-            {label}
-          </Text>
-          {Boolean(subLabel) && (
-            <Text style={styles.subLabel}>{subLabel}</Text>
-          )}
-        </View>
-      )}
-    </Pressable>
-  );
-});
+    return (
+      <Pressable
+        onPress={handlePress}
+        android_ripple={{
+          color: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.15)',
+          borderless: true,
+          radius: 35,
+        }}
+        style={({ pressed }) => [
+          styles.keyCircle,
+          isBackspace && styles.actionKeyCircle,
+          label === '.' && styles.actionKeyCircle,
+          pressed && styles.keyPressed,
+        ]}
+        accessibilityLabel={isBackspace ? 'backspace' : label}
+        accessibilityRole="button"
+      >
+        {isBackspace ? (
+          <Ionicons name="backspace-outline" size={26} color={colors.text.primary} />
+        ) : (
+          <View style={styles.keyTextCol}>
+            <Text style={[styles.keyLabel, label === '.' && styles.dotLabel]}>
+              {label}
+            </Text>
+            {Boolean(subLabel) && (
+              <Text style={styles.subLabel}>{subLabel}</Text>
+            )}
+          </View>
+        )}
+      </Pressable>
+    );
+  },
+  (prev, next) =>
+    prev.label === next.label &&
+    prev.subLabel === next.subLabel &&
+    prev.isBackspace === next.isBackspace
+);
 
 const makeStyles = (colors: Colors, isDark: boolean) =>
   StyleSheet.create({
@@ -164,23 +164,23 @@ const makeStyles = (colors: Colors, isDark: boolean) =>
       width: '100%',
       maxWidth: 320,
       alignSelf: 'center',
-      paddingVertical: 12,
+      paddingVertical: 10,
     },
     row: {
       flexDirection: 'row',
       justifyContent: 'space-around',
       alignItems: 'center',
-      marginBottom: 16,
+      marginBottom: 14,
     },
     keyCircle: {
-      width: 68,
-      height: 68,
-      borderRadius: 34,
-      backgroundColor: isDark ? '#263143' : '#F1F5F9',
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+      backgroundColor: isDark ? '#2D3748' : '#F1F5F9',
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1.5,
-      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.12)',
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.25,
@@ -188,10 +188,10 @@ const makeStyles = (colors: Colors, isDark: boolean) =>
       elevation: 4,
     },
     actionKeyCircle: {
-      backgroundColor: isDark ? '#1E2736' : '#E2E8F0',
+      backgroundColor: isDark ? '#1F2733' : '#E2E8F0',
     },
     keyPressed: {
-      backgroundColor: isDark ? '#3B4A63' : '#CBD5E1',
+      backgroundColor: isDark ? '#4A5568' : '#CBD5E1',
       transform: [{ scale: 0.93 }],
     },
     keyTextCol: {
@@ -199,15 +199,15 @@ const makeStyles = (colors: Colors, isDark: boolean) =>
       justifyContent: 'center',
     },
     keyLabel: {
-      fontSize: 25,
+      fontSize: 26,
       fontWeight: '600',
       color: colors.text.primary,
       lineHeight: 28,
     },
     dotLabel: {
-      fontSize: 28,
+      fontSize: 30,
       fontWeight: '800',
-      lineHeight: 28,
+      lineHeight: 30,
     },
     subLabel: {
       fontSize: 9,

@@ -53,6 +53,8 @@ import {
   getCreditIssuedToday,
   upsertDailySummary,
 } from '../repositories/dailySummary';
+import { TransactionType } from '../types';
+import { isSoundEnabled, playPaymentSound } from '../utils/sound';
 import { db } from '../db';
 
 // ─── Props ────────────────────────────────────────────────────────────────────

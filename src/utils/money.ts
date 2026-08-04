@@ -41,8 +41,9 @@
  *   toCents(75.5)   → 7550
  *   toCents(0.1)    → 10   (not 9.999999...)
  */
-export function toCents(shillings: number): number {
-  return Math.round(shillings * 100);
+export function toCents(shillings: number | string): number {
+  const num = typeof shillings === 'number' ? shillings : parseFloat(shillings) || 0;
+  return Math.round(num * 100);
 }
 
 /**

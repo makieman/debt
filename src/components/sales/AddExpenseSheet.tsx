@@ -4,7 +4,7 @@
  * Bottom sheet modal component for adding a daily expense.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -196,7 +196,7 @@ const makeStyles = (colors: Colors) =>
       justifyContent: 'flex-end',
     },
     backdrop: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     sheetContainer: {

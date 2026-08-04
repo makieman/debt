@@ -37,7 +37,7 @@ import {
   EXPENSE_CATEGORIES,
   EXPENSE_CATEGORY_LABELS,
 } from '../types';
-import { SalesStackParamList } from '../navigation/SalesStack';
+import { SalesStackParamList } from '../navigation/types';
 
 type SalesReportNavProp = NativeStackNavigationProp<SalesStackParamList, 'SalesHome'>;
 
@@ -125,7 +125,7 @@ export function SalesReportScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('salesReport')}</Text>
         <Pressable onPress={() => handleOpenEntry()} style={styles.todayEntryBtn}>
-          <Ionicons name="create-outline" size={18} color={colors.accent.teal} />
+          <Ionicons name="add-circle-outline" size={18} color={colors.accent.teal} />
           <Text style={styles.todayEntryBtnText}>{t('todaySummary')}</Text>
         </Pressable>
       </View>
@@ -304,6 +304,10 @@ export function SalesReportScreen() {
               {summaries.length === 0 ? (
                 <View style={styles.emptyState}>
                   <Text style={styles.emptyStateText}>{t('noEntriesForPeriod')}</Text>
+                  <Pressable style={styles.emptyAddBtn} onPress={() => handleOpenEntry()}>
+                    <Ionicons name="add-circle" size={18} color={colors.white} />
+                    <Text style={styles.emptyAddBtnText}>{t('todaySummary')}</Text>
+                  </Pressable>
                 </View>
               ) : (
                 summaries.map((item) => (
@@ -318,6 +322,19 @@ export function SalesReportScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Floating Action Button (+) */}
+      <Pressable
+        onPress={() => handleOpenEntry()}
+        style={({ pressed }) => [
+          styles.fab,
+          pressed && styles.fabPressed,
+        ]}
+        accessibilityLabel={t('todaySummary') || 'Add Daily Summary'}
+        accessibilityRole="button"
+      >
+        <Ionicons name="add" size={32} color={colors.white} />
+      </Pressable>
     </SafeAreaView>
   );
 }
@@ -499,5 +516,40 @@ const makeStyles = (colors: Colors) =>
     emptyStateText: {
       fontSize: 14,
       color: colors.text.muted,
+    },
+    emptyAddBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: colors.accent.teal,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      marginTop: 12,
+    },
+    emptyAddBtnText: {
+      color: colors.white,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    fab: {
+      position: 'absolute',
+      right: 20,
+      bottom: 20,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.accent.teal,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: colors.accent.teal,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    fabPressed: {
+      opacity: 0.85,
+      transform: [{ scale: 0.95 }],
     },
   });

@@ -55,7 +55,7 @@ export function DailyEntryScreen() {
   const [savedBadgeVisible, setSavedBadgeVisible] = useState(false);
   const [isCreditEdited, setIsCreditEdited] = useState(false);
 
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (summary) {

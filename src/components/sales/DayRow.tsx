@@ -52,15 +52,17 @@ export function DayRow({ summary, onPress }: DayRowProps) {
       <View style={styles.leftCol}>
         <Text style={styles.dateText}>{formatDateLabel(summary.date)}</Text>
         <Text style={styles.revenueSubtext}>
-          Rev: {formatMoney(summary.totalRevenue)}
+          Rev: {formatMoney(summary.totalRevenue)} • Exp: {formatMoney(summary.totalExpenses)}
         </Text>
       </View>
 
       <View style={styles.rightCol}>
-        <Text style={[styles.profitText, { color: profitColor }]}>
-          {formatMoney(summary.profit)}
-        </Text>
-        <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
+        <View style={[styles.profitBadge, { backgroundColor: isPositive ? colors.accent.tealDim : isNegative ? `${colors.debt}15` : colors.background.tertiary }]}>
+          <Text style={[styles.profitText, { color: profitColor }]}>
+            {formatMoney(summary.profit)}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
       </View>
     </Pressable>
   );
@@ -100,8 +102,13 @@ const makeStyles = (colors: Colors) =>
       alignItems: 'center',
       gap: 8,
     },
+    profitBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 10,
+    },
     profitText: {
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: '800',
     },
   });

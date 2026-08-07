@@ -24,6 +24,7 @@ import { useThemeContext, Colors } from '../theme';
 import { useLanguage } from '../store/LanguageContext';
 import { db } from '../db';
 import { DayRow } from '../components/sales/DayRow';
+import { SalesTrendChart } from '../components/sales/SalesTrendChart';
 import { formatMoney } from '../utils/money';
 import {
   getTodayDateString,
@@ -235,6 +236,9 @@ export function SalesReportScreen() {
                 </View>
               </ScrollView>
             )}
+
+            {/* Sales Trend Chart */}
+            <SalesTrendChart summaries={summaries} />
 
             {/* Revenue Breakdown */}
             {reportTotals && reportTotals.totalRevenue > 0 && (

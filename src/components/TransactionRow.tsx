@@ -20,7 +20,7 @@
  * Flat rows with a subtle divider line feel like a real bank statement.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Transaction } from '../types';
 import { useThemeContext, Colors } from '../theme';
@@ -36,11 +36,11 @@ interface TransactionRowProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function TransactionRow({ transaction }: TransactionRowProps) {
+export const TransactionRow = React.memo(function TransactionRow({ transaction }: TransactionRowProps) {
   const { colors } = useThemeContext();
   const { profile } = useShopProfile();
   const currency = profile?.currency || 'KES';
-  const styles = makeStyles(colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const isDebt = transaction.type === 'debt';
   const amountColor = isDebt ? colors.debt : colors.payment;
   const amountPrefix = isDebt ? '−' : '+';  // visual direction sign
@@ -78,7 +78,7 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
       </View>
     </View>
   );
-}
+});
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 

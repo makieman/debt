@@ -23,12 +23,20 @@
  */
 module.exports = function (api) {
   api.cache(true);
+
+  const isProduction = process.env.NODE_ENV === 'production';
+
   return {
     presets: [
       ["babel-preset-expo", { jsxImportSource: "nativewind" }],
       "nativewind/babel",
     ],
     plugins: [
+      // Strip all console.* calls in production builds.
+      // This eliminates string serialization overhead on the JS thread
+      // and prevents internal state from leaking to logcat/Xcode console.
+      // In development, console.log still works normally.
+      ...(isProduction ? ["transform-remove-console"] : []),
       "react-native-reanimated/plugin", // MUST be last — transforms Reanimated worklets
     ],
   };

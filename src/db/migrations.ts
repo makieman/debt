@@ -33,6 +33,12 @@ export async function runMigrations(db: SQLiteDatabase): Promise<void> {
     // Without this, ON DELETE CASCADE silently does nothing.
     await db.execAsync('PRAGMA foreign_keys = ON;');
 
+    // Step 1b: Enable WAL (Write-Ahead Logging) mode.
+    // WAL allows concurrent reads during writes — the UI can refresh data
+    // while a transaction is being saved without blocking. This is the
+    // recommended journal mode for mobile apps.
+    await db.execAsync('PRAGMA journal_mode = WAL;');
+
     // Step 2: Run all CREATE TABLE statements inside a single transaction.
     // `withTransactionAsync` automatically commits on success and rolls back
     // on any error — no manual BEGIN/COMMIT/ROLLBACK needed.
@@ -49,6 +55,15 @@ export async function runMigrations(db: SQLiteDatabase): Promise<void> {
         console.log('[migrations] Adding isDeleted column to customers table');
         await db.execAsync('ALTER TABLE customers ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0;');
       }
+
+      // Step 3: Create indexes on hot query columns.
+      // These accelerate JOIN, WHERE, GROUP BY, and ORDER BY on the columns
+      // most frequently queried by the dashboard, customer list, and transaction screens.
+      // CREATE INDEX IF NOT EXISTS is safe to run every launch — no-ops if already present.
+      await db.execAsync('CREATE INDEX IF NOT EXISTS idx_transactions_customerId ON transactions(customerId);');
+      await db.execAsync('CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);');
+      await db.execAsync('CREATE INDEX IF NOT EXISTS idx_transactions_createdAt ON transactions(createdAt);');
+      await db.execAsync('CREATE INDEX IF NOT EXISTS idx_customers_isDeleted ON customers(isDeleted);');
     });
 
     console.log('✅ Database ready');

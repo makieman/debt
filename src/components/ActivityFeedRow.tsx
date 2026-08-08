@@ -32,7 +32,7 @@
  * A focused component with clear purpose is always easier to understand.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ActivityItem } from '../types';
 import { useThemeContext, Colors } from '../theme';
@@ -49,12 +49,12 @@ interface ActivityFeedRowProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ActivityFeedRow({ item }: ActivityFeedRowProps) {
+export const ActivityFeedRow = React.memo(function ActivityFeedRow({ item }: ActivityFeedRowProps) {
   const { colors } = useThemeContext();
   const { profile } = useShopProfile();
   const { t } = useLanguage();
   const currency = profile?.currency || 'KES';
-  const styles = makeStyles(colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const isDebt = item.type === 'debt';
   const typeColor = isDebt ? colors.debt : colors.payment;
 
@@ -89,7 +89,7 @@ export function ActivityFeedRow({ item }: ActivityFeedRowProps) {
       </View>
     </View>
   );
-}
+});
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 

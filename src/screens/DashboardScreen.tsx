@@ -10,7 +10,7 @@
  * Implements a clean, premium light-mode interface following user guidelines.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,7 @@ import { useLanguage } from '../store/LanguageContext';
 import { formatMoney } from '../utils/money';
 import { ActivityFeedRow } from '../components/ActivityFeedRow';
 import { AddCustomerModal } from '../components/AddCustomerModal';
+import { RemindersModal } from '../components/RemindersModal';
 import { RootTabParamList } from '../navigation/types';
 
 type DashboardNavProp = BottomTabNavigationProp<RootTabParamList, 'Dashboard'>;
@@ -43,25 +44,26 @@ export function DashboardScreen() {
   const { profile } = useShopProfile();
   const { t } = useLanguage();
   const currency = profile?.currency || 'KES';
-  const styles = makeStyles(colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const {
-    totalOutstanding,
-    totalReceivables,
-    totalCollected,
-    customerCount,
-    recentActivity,
-    loading,
-    error,
-    refresh,
-  } = useDashboard();
+    totalOutstanding = 0,
+    totalReceivables = 0,
+    totalCollected = 0,
+    topDebtors = [],
+    customerCount = 0,
+    recentActivity = [],
+    loading = true,
+    error = null,
+    refresh = () => {},
+  } = useDashboard() || {};
 
-  const getGreeting = () => {
+  const greeting = useMemo(() => {
     const hour = new Date().getHours();
     if (hour < 12) return t('goodMorning');
     if (hour < 17) return t('goodAfternoon');
     return t('goodEvening');
-  };
+  }, [t]);
 
   const ownerFirstName = profile?.ownerName
     ? profile.ownerName.trim().split(' ')[0]
@@ -70,6 +72,7 @@ export function DashboardScreen() {
 
   // ── States ─────────────────────────────────────────────────────────────────
   const [modalVisible, setModalVisible] = useState(false);
+  const [remindersVisible, setRemindersVisible] = useState(false);
   const [showValues, setShowValues] = useState(true);
 
   // ── Error state ────────────────────────────────────────────────────────────
@@ -109,12 +112,26 @@ export function DashboardScreen() {
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <View style={styles.header}>
           <View style={[styles.headerTitleContainer, { paddingHorizontal: 0, paddingRight: 12 }]}>
-            <Text style={styles.greeting}>{getGreeting()}, {capitalizedName} 👋</Text>
+            <Text style={styles.greeting}>{greeting}, {capitalizedName} 👋</Text>
             <Text style={styles.greetingSub}>{t('businessOverview')}</Text>
           </View>
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="notifications-outline" size={24} color={colors.text.primary} />
-          </Pressable>
+          {profile?.notificationReminders !== false && (
+            <Pressable
+              style={styles.iconButton}
+              onPress={() => setRemindersVisible(true)}
+              accessibilityLabel={t('notificationReminders') || 'Payment Reminders'}
+              accessibilityRole="button"
+            >
+              <Ionicons name="notifications-outline" size={24} color={colors.text.primary} />
+              {(topDebtors?.length ?? 0) > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {(topDebtors?.length ?? 0) > 9 ? '9+' : topDebtors.length}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          )}
         </View>
 
         {/* ── Prominent Receivables Card ──────────────────────────────────── */}
@@ -259,6 +276,13 @@ export function DashboardScreen() {
           refresh();
         }}
       />
+
+      {/* ── Payment Reminders Modal ──────────────────────────────────────── */}
+      <RemindersModal
+        visible={remindersVisible}
+        topDebtors={topDebtors}
+        onClose={() => setRemindersVisible(false)}
+      />
     </View>
   );
 }
@@ -343,6 +367,24 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.background.tertiary,
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: colors.debt,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
   },
 
   // ── Receivables Card ─────────────────────────────────────────────────────

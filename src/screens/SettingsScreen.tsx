@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -329,7 +329,7 @@ export function SettingsScreen() {
   };
 
   // Styles defined dynamically inside render to capture current colors
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.background.primary },
     container: { flex: 1 },
     contentContainer: { paddingHorizontal: 20, paddingTop: 8 },
@@ -376,7 +376,7 @@ export function SettingsScreen() {
     input: { backgroundColor: colors.background.secondary, borderRadius: 12, padding: 14, fontSize: 16, color: colors.text.primary, marginBottom: 16, borderWidth: 1, borderColor: colors.background.tertiary },
     saveBtn: { backgroundColor: colors.accent.teal, paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 8 },
     saveBtnText: { color: colors.white, fontSize: 16, fontWeight: '700' },
-  });
+  }), [colors]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>

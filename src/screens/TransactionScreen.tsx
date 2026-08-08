@@ -76,7 +76,7 @@
  * on negative balances — Math.abs() gives us a positive display value.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -113,7 +113,7 @@ export function TransactionScreen() {
   const { profile } = useShopProfile();
   const { t } = useLanguage();
   const currency = profile?.currency || 'KES';
-  const styles = makeStyles(colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   // ── Navigation hooks ───────────────────────────────────────────────────────
   //

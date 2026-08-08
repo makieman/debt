@@ -231,6 +231,7 @@ export const translations = {
     categoryOther: 'Other',
     categoryCustom: 'Custom',
     customCategoryPlaceholder: 'e.g. Generator fuel',
+    salesTrend: 'Sales Trend',
   },
   sw: {
     // Settings
@@ -454,6 +455,7 @@ export const translations = {
     categoryOther: 'Nyingine',
     categoryCustom: 'Maalum',
     customCategoryPlaceholder: 'mfano Mafuta ya jenereta',
+    salesTrend: 'Mwelekeo wa Mauzo',
   }
 };
 

@@ -5,7 +5,7 @@
  * support horizontal list spacing, and filter on clicking summary cards.
  */
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -37,7 +37,7 @@ export function CustomerListScreen() {
   const { profile } = useShopProfile();
   const { t } = useLanguage();
   const currency = profile?.currency || 'KES';
-  const styles = makeStyles(colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { customers, totalOwed, totalPaid, loading, refreshing, error, refresh } = useCustomers();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<CustomerListNavProp>();
@@ -63,6 +63,31 @@ export function CustomerListScreen() {
     setSelectedCustomer(customer);
     setEditModalVisible(true);
   }, []);
+
+  // Stable FlatList sub-components to avoid re-creation on every render
+  const keyExtractor = useCallback((item: CustomerWithBalance) => String(item.id), []);
+
+  const ItemSeparator = useMemo(() => {
+    const Separator = () => <View style={styles.separator} />;
+    return Separator;
+  }, [styles.separator]);
+
+  const renderItem = useCallback(({ item }: { item: CustomerWithBalance }) => (
+    <CustomerCard
+      customer={item}
+      balance={item.balance}
+      onPress={() => handleCardPress(item)}
+      onLongPress={() => handleCardLongPress(item)}
+    />
+  ), [handleCardPress, handleCardLongPress]);
+
+  // Fixed row height for getItemLayout — enables scroll-to-index and skips measurement
+  const ITEM_HEIGHT = 76; // 48px avatar + 14px*2 padding
+  const getItemLayout = useCallback((_data: any, index: number) => ({
+    length: ITEM_HEIGHT,
+    offset: ITEM_HEIGHT * index,
+    index,
+  }), []);
 
   // ── Filtered customer list ───────────────────────────────────────────────
   const filteredCustomers = customers.filter((c) => {
@@ -232,16 +257,9 @@ export function CustomerListScreen() {
       {/* ── Customer List ──────────────────────────────────────────────────── */}
       <FlatList
         data={filteredCustomers}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <CustomerCard
-            customer={item}
-            balance={item.balance}
-            onPress={() => handleCardPress(item)}
-            onLongPress={() => handleCardLongPress(item)}
-          />
-        )}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        ItemSeparatorComponent={ItemSeparator}
         ListEmptyComponent={
           searchQuery || filterMode !== "all" ? (
             <View style={styles.noResultsContainer}>
@@ -260,20 +278,45 @@ export function CustomerListScreen() {
           filteredCustomers.length === 0 && styles.listContentEmpty,
         ]}
         showsVerticalScrollIndicator={false}
+        getItemLayout={getItemLayout}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={true}
       />
 
-      {/* ── Floating + button ───────────────────────────────────────────────── */}
+      {/* FAB — fixed to bottom right, above tab bar */}
       <Pressable
         onPress={() => setModalVisible(true)}
-        style={({ pressed }) => [
-          styles.fab,
-          { bottom: insets.bottom + 65 },
-          pressed && styles.fabPressed,
-        ]}
-        accessibilityLabel="Add new customer"
+        style={{
+          position: 'absolute',
+          bottom: 24,
+          right: 20,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: colors.accent.teal,
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 6,
+        }}
         accessibilityRole="button"
+        accessibilityLabel="Add customer"
       >
-        <Text style={styles.fabIcon}>+</Text>
+        <Text style={{
+          color: '#FFFFFF',
+          fontSize: 32,
+          fontWeight: '300',
+          lineHeight: 36,
+          textAlign: 'center',
+          includeFontPadding: false,
+        }}>
+          +
+        </Text>
       </Pressable>
 
       <AddCustomerModal
@@ -511,30 +554,30 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
   },
 
   // ── FAB ────────────────────────────────────────────────────────────────────
-  fab: {
+  fabContainer: {
     position: "absolute",
-    right: 15,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    zIndex: 9999,
+    elevation: 10,
+  },
+  fabButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.accent.teal,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: colors.accent.teal,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
-    shadowRadius: 12,
+    shadowRadius: 8,
     elevation: 8,
   },
   fabPressed: {
     opacity: 0.85,
     transform: [{ scale: 0.94 }],
-  },
-  fabIcon: {
-    color: colors.white,
-    fontSize: 36,
-    fontWeight: "300",
-    lineHeight: 38,
-    marginTop: -2,
   },
 });

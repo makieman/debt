@@ -5,7 +5,7 @@
  * category breakdowns, and a list of daily summary entries.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -46,9 +46,10 @@ type PeriodOption = 'today' | 'thisWeek' | 'thisMonth' | 'custom';
 
 export function SalesReportScreen() {
   const navigation = useNavigation<SalesReportNavProp>();
+  const insets = useSafeAreaInsets();
   const { colors } = useThemeContext();
   const { t } = useLanguage();
-  const styles = makeStyles(colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [period, setPeriod] = useState<PeriodOption>('today');
   const [fromDateInput, setFromDateInput] = useState('');
@@ -121,7 +122,7 @@ export function SalesReportScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Top Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('salesReport')}</Text>
@@ -191,29 +192,21 @@ export function SalesReportScreen() {
             {/* Summary Cards Horizontal Scroll */}
             {reportTotals && (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cardsScroll}>
-                <View style={[styles.statCard, { borderLeftColor: colors.accent.teal }]}>
+                <View style={styles.statCard}>
                   <Text style={styles.statLabel}>{t('totalRevenue')}</Text>
                   <Text style={[styles.statValue, { color: colors.accent.teal }]}>
                     {formatMoney(reportTotals.totalRevenue)}
                   </Text>
                 </View>
 
-                <View style={[styles.statCard, { borderLeftColor: colors.debt }]}>
+                <View style={styles.statCard}>
                   <Text style={styles.statLabel}>{t('totalExpenses')}</Text>
                   <Text style={[styles.statValue, { color: colors.debt }]}>
                     {formatMoney(reportTotals.totalExpenses)}
                   </Text>
                 </View>
 
-                <View
-                  style={[
-                    styles.statCard,
-                    {
-                      borderLeftColor:
-                        reportTotals.profit >= 0 ? colors.accent.teal : colors.debt,
-                    },
-                  ]}
-                >
+                <View style={styles.statCard}>
                   <Text style={styles.statLabel}>{t('netProfit')}</Text>
                   <Text
                     style={[
@@ -327,19 +320,41 @@ export function SalesReportScreen() {
         )}
       </ScrollView>
 
-      {/* Floating Action Button (+) */}
+      {/* FAB — fixed to bottom right, above tab bar */}
       <Pressable
         onPress={() => handleOpenEntry()}
-        style={({ pressed }) => [
-          styles.fab,
-          pressed && styles.fabPressed,
-        ]}
-        accessibilityLabel={t('todaySummary') || 'Add Daily Summary'}
+        style={{
+          position: 'absolute',
+          bottom: 24,
+          right: 20,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: colors.accent.teal,
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 6,
+        }}
         accessibilityRole="button"
+        accessibilityLabel="Add Daily Summary"
       >
-        <Ionicons name="add" size={32} color={colors.white} />
+        <Text style={{
+          color: '#FFFFFF',
+          fontSize: 32,
+          fontWeight: '300',
+          lineHeight: 36,
+          textAlign: 'center',
+          includeFontPadding: false,
+        }}>
+          +
+        </Text>
       </Pressable>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -441,7 +456,6 @@ const makeStyles = (colors: Colors) =>
       borderRadius: 16,
       marginRight: 10,
       width: 145,
-      borderLeftWidth: 4,
       borderWidth: 1,
       borderColor: colors.background.tertiary,
     },
@@ -547,10 +561,16 @@ const makeStyles = (colors: Colors) =>
       fontSize: 14,
       fontWeight: '700',
     },
-    fab: {
+    fabContainer: {
       position: 'absolute',
       right: 20,
-      bottom: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      zIndex: 9999,
+      elevation: 10,
+    },
+    fabButton: {
       width: 56,
       height: 56,
       borderRadius: 28,
@@ -561,7 +581,7 @@ const makeStyles = (colors: Colors) =>
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.4,
       shadowRadius: 8,
-      elevation: 6,
+      elevation: 8,
     },
     fabPressed: {
       opacity: 0.85,

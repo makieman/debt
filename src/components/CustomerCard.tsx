@@ -4,7 +4,7 @@
  * A single row in the customer list, styled to match premium clean layouts.
  */
 
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Customer } from "../types";
@@ -50,11 +50,11 @@ function formatMoney(amount: number, currency: string = 'KES'): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function CustomerCard({ customer, balance, onPress, onLongPress }: CustomerCardProps) {
+export const CustomerCard = React.memo(function CustomerCard({ customer, balance, onPress, onLongPress }: CustomerCardProps) {
   const { colors } = useThemeContext();
   const { profile } = useShopProfile();
   const currency = profile?.currency || 'KES';
-  const styles = makeStyles(colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const initials = getInitials(customer.name);
   const isSettled = balance <= 0;
@@ -110,7 +110,13 @@ export function CustomerCard({ customer, balance, onPress, onLongPress }: Custom
       </View>
     </Pressable>
   );
-}
+}, (prev, next) => {
+  // Custom comparator: skip re-render if the data that affects display is the same
+  return prev.customer.id === next.customer.id
+    && prev.customer.name === next.customer.name
+    && prev.customer.phone === next.customer.phone
+    && prev.balance === next.balance;
+});
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 

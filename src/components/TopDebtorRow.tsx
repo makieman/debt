@@ -40,12 +40,12 @@ interface TopDebtorRowProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function TopDebtorRow({ debtor, rank, onPress }: TopDebtorRowProps) {
+export const TopDebtorRow = React.memo(function TopDebtorRow({ debtor, rank, onPress }: TopDebtorRowProps) {
   const { colors } = useThemeContext();
   const { profile } = useShopProfile();
   const { t } = useLanguage();
   const currency = profile?.currency || 'KES';
-  const styles = makeStyles(colors);
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
   const initials = getInitials(debtor.name);
   const isTopRank = rank === 1;
 
@@ -69,24 +69,23 @@ export function TopDebtorRow({ debtor, rank, onPress }: TopDebtorRowProps) {
       </View>
 
       {/* ── Initials circle ─────────────────────────────────────────────── */}
-      {/* Same initials logic as CustomerCard — extracted into utils/strings */}
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>{initials}</Text>
       </View>
 
-      {/* ── Name + "owes" label ─────────────────────────────────────────── */}
+      {/* ── Customer name ────────────────────────────────────────────────── */}
       <View style={styles.nameContainer}>
         <Text style={styles.name} numberOfLines={1}>{debtor.name}</Text>
         <Text style={styles.owesLabel}>{t('owes')}</Text>
       </View>
 
-      {/* ── Balance (right-aligned) ──────────────────────────────────────── */}
+      {/* ── Balance (right aligned) ──────────────────────────────────────── */}
       <Text style={styles.balance} numberOfLines={1}>
         {formatMoney(debtor.balance, currency)}
       </Text>
     </Pressable>
   );
-}
+});
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 

@@ -5,13 +5,13 @@
  * and quick actions (WhatsApp, Call/SMS) for customers with outstanding debt.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   Modal,
   View,
   Text,
   Pressable,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Linking,
   Alert,
@@ -52,7 +52,68 @@ function getAvatarColor(name: string): string {
   return AVATAR_COLORS[index];
 }
 
-export function RemindersModal({
+const DebtorCardItem = React.memo(function DebtorCardItem({
+  debtor,
+  currency,
+  t,
+  onWhatsApp,
+  onSelectCustomer,
+  styles,
+}: {
+  debtor: TopDebtor;
+  currency: string;
+  t: (key: string) => string;
+  onWhatsApp: (debtor: TopDebtor) => void;
+  onSelectCustomer?: (customerId: number) => void;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  const avatarBg = getAvatarColor(debtor.name);
+  const initials = getInitials(debtor.name);
+
+  return (
+    <View style={styles.debtorCard}>
+      <View style={styles.debtorInfoRow}>
+        <View style={[styles.avatar, { backgroundColor: avatarBg }]}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </View>
+        <View style={styles.debtorMeta}>
+          <Text style={styles.debtorName} numberOfLines={1}>
+            {debtor.name}
+          </Text>
+          <Text style={styles.debtorBalance}>
+            {t('owes')}{' '}
+            <Text style={styles.balanceHighlight}>
+              {formatMoney(debtor.balance, currency)}
+            </Text>
+          </Text>
+        </View>
+      </View>
+
+      {/* Actions */}
+      <View style={styles.actionRow}>
+        <Pressable
+          style={styles.whatsappBtn}
+          onPress={() => onWhatsApp(debtor)}
+        >
+          <Ionicons name="logo-whatsapp" size={16} color="#FFFFFF" />
+          <Text style={styles.whatsappBtnText}>WhatsApp</Text>
+        </Pressable>
+
+        {onSelectCustomer && (
+          <Pressable
+            style={styles.viewBtn}
+            onPress={() => onSelectCustomer(debtor.customerId)}
+          >
+            <Text style={styles.viewBtnText}>{t('viewAll') || 'View'}</Text>
+            <Ionicons name="chevron-forward" size={14} color={styles.viewBtnText.color} />
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
+});
+
+export const RemindersModal = React.memo(function RemindersModal({
   visible,
   topDebtors = [],
   onClose,
@@ -65,13 +126,13 @@ export function RemindersModal({
   const currency = profile?.currency || 'KES';
   const language = profile?.language || 'en';
   const shopName = profile?.ownerName || 'our shop';
-  const styles = makeStyles(colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const sendWhatsAppReminder = useCallback(
     async (debtor: TopDebtor) => {
       const amountStr = formatMoney(debtor.balance, currency);
       const isSwahili = language === 'sw';
-      
+
       const message = isSwahili
         ? `Habari ${debtor.name} 👋, huu ni ukumbusho wa kirafiki kutoka ${shopName} kuhusu salio lako la deni la ${amountStr}. Asante!`
         : `Hello ${debtor.name} 👋, this is a friendly reminder from ${shopName} regarding your outstanding balance of ${amountStr}. Thank you!`;
@@ -84,15 +145,43 @@ export function RemindersModal({
         if (supported) {
           await Linking.openURL(url);
         } else {
-          // Fallback to web WhatsApp link
           await Linking.openURL(`https://api.whatsapp.com/send?text=${encoded}`);
         }
       } catch (err) {
-        Alert.alert('Unable to open WhatsApp', 'Please ensure WhatsApp is installed on your device.');
+        Alert.alert(
+          'Unable to open WhatsApp',
+          'Please ensure WhatsApp is installed on your device.'
+        );
       }
     },
     [currency, shopName, language]
   );
+
+  const handleSelectCustomer = useCallback(
+    (customerId: number) => {
+      onClose();
+      onSelectCustomer?.(customerId);
+    },
+    [onClose, onSelectCustomer]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: TopDebtor }) => (
+      <DebtorCardItem
+        debtor={item}
+        currency={currency}
+        t={t}
+        onWhatsApp={sendWhatsAppReminder}
+        onSelectCustomer={onSelectCustomer ? handleSelectCustomer : undefined}
+        styles={styles}
+      />
+    ),
+    [currency, t, sendWhatsAppReminder, onSelectCustomer, handleSelectCustomer, styles]
+  );
+
+  const keyExtractor = useCallback((item: TopDebtor) => String(item.customerId), []);
+
+  if (!visible) return null;
 
   return (
     <Modal
@@ -101,13 +190,13 @@ export function RemindersModal({
       transparent
       onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable
+      <View style={styles.overlayContainer}>
+        <Pressable style={styles.backdrop} onPress={onClose} />
+        <View
           style={[
             styles.sheet,
             { paddingBottom: Math.max(insets.bottom + 16, 28) },
           ]}
-          onPress={() => {}}
         >
           {/* Drag handle */}
           <View style={styles.dragHandle} />
@@ -116,7 +205,9 @@ export function RemindersModal({
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
               <Ionicons name="notifications" size={24} color={colors.accent.teal} />
-              <Text style={styles.title}>{t('notificationReminders') || 'Payment Reminders'}</Text>
+              <Text style={styles.title}>
+                {t('notificationReminders') || 'Payment Reminders'}
+              </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10}>
               <Ionicons name="close" size={24} color={colors.text.secondary} />
@@ -125,82 +216,54 @@ export function RemindersModal({
 
           <Text style={styles.subtitle}>
             {(topDebtors?.length ?? 0) > 0
-              ? `${topDebtors.length} ${topDebtors.length === 1 ? 'customer has' : 'customers have'} pending balances`
+              ? `${topDebtors.length} ${
+                  topDebtors.length === 1 ? 'customer has' : 'customers have'
+                } pending balances`
               : 'All customer accounts are settled'}
           </Text>
 
           {/* Debtors List */}
-          <ScrollView
-            style={styles.listContainer}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {(topDebtors?.length ?? 0) === 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="checkmark-circle-outline" size={48} color={colors.payment} />
-                <Text style={styles.emptyTitle}>All Clear!</Text>
-                <Text style={styles.emptyText}>No pending payment reminders right now.</Text>
-              </View>
-            ) : (
-              topDebtors.map((debtor) => {
-                const avatarBg = getAvatarColor(debtor.name);
-                const initials = getInitials(debtor.name);
-                return (
-                  <View key={debtor.customerId} style={styles.debtorCard}>
-                    <View style={styles.debtorInfoRow}>
-                      <View style={[styles.avatar, { backgroundColor: avatarBg }]}>
-                        <Text style={styles.avatarText}>{initials}</Text>
-                      </View>
-                      <View style={styles.debtorMeta}>
-                        <Text style={styles.debtorName} numberOfLines={1}>
-                          {debtor.name}
-                        </Text>
-                        <Text style={styles.debtorBalance}>
-                          {t('owes')} <Text style={{ color: colors.debt, fontWeight: '700' }}>{formatMoney(debtor.balance, currency)}</Text>
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Actions */}
-                    <View style={styles.actionRow}>
-                      <Pressable
-                        style={styles.whatsappBtn}
-                        onPress={() => sendWhatsAppReminder(debtor)}
-                      >
-                        <Ionicons name="logo-whatsapp" size={16} color="#FFFFFF" />
-                        <Text style={styles.whatsappBtnText}>WhatsApp</Text>
-                      </Pressable>
-
-                      {onSelectCustomer && (
-                        <Pressable
-                          style={styles.viewBtn}
-                          onPress={() => {
-                            onClose();
-                            onSelectCustomer(debtor.customerId);
-                          }}
-                        >
-                          <Text style={styles.viewBtnText}>{t('viewAll') || 'View'}</Text>
-                          <Ionicons name="chevron-forward" size={14} color={colors.accent.teal} />
-                        </Pressable>
-                      )}
-                    </View>
-                  </View>
-                );
-              })
-            )}
-          </ScrollView>
-        </Pressable>
-      </Pressable>
+          {(topDebtors?.length ?? 0) === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={48}
+                color={colors.payment}
+              />
+              <Text style={styles.emptyTitle}>All Clear!</Text>
+              <Text style={styles.emptyText}>
+                No pending payment reminders right now.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={topDebtors}
+              keyExtractor={keyExtractor}
+              renderItem={renderItem}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              removeClippedSubviews={true}
+              scrollEventThrottle={16}
+              initialNumToRender={6}
+              maxToRenderPerBatch={8}
+              windowSize={5}
+            />
+          )}
+        </View>
+      </View>
     </Modal>
   );
-}
+});
 
 const makeStyles = (colors: Colors) =>
   StyleSheet.create({
-    overlay: {
+    overlayContainer: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
       justifyContent: 'flex-end',
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     sheet: {
       backgroundColor: colors.background.primary,
@@ -238,9 +301,6 @@ const makeStyles = (colors: Colors) =>
       fontSize: 13,
       color: colors.text.secondary,
       marginBottom: 16,
-    },
-    listContainer: {
-      flexGrow: 1,
     },
     scrollContent: {
       paddingBottom: 24,
@@ -298,6 +358,10 @@ const makeStyles = (colors: Colors) =>
     debtorBalance: {
       fontSize: 13,
       color: colors.text.secondary,
+    },
+    balanceHighlight: {
+      color: colors.debt,
+      fontWeight: '700',
     },
     actionRow: {
       flexDirection: 'row',

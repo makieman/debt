@@ -117,9 +117,199 @@ export function SalesReportScreen() {
     loadReport();
   }, [period, loadReport]);
 
-  const handleOpenEntry = (date?: string) => {
+  const handleOpenEntry = useCallback((date?: string) => {
     navigation.navigate('DailyEntry', { date });
-  };
+  }, [navigation]);
+
+  const renderHeader = () => (
+    <>
+      {/* Period Pills */}
+      <View style={styles.periodRow}>
+        {(['today', 'thisWeek', 'thisMonth', 'custom'] as PeriodOption[]).map((p) => {
+          const isSelected = period === p;
+          const labelKey = p as any;
+          return (
+            <Pressable
+              key={p}
+              onPress={() => {
+                setPeriod(p);
+                if (p === 'custom' && !fromDateInput) {
+                  const todayStr = getTodayDateString();
+                  setFromDateInput(todayStr);
+                  setToDateInput(todayStr);
+                }
+              }}
+              style={[styles.periodPill, isSelected && styles.periodPillSelected]}
+            >
+              <Text style={[styles.periodPillText, isSelected && styles.periodPillTextSelected]}>
+                {t(labelKey)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Custom Range Input */}
+      {period === 'custom' && (
+        <View style={styles.customRangeRow}>
+          <View style={styles.customDateCol}>
+            <Text style={styles.customDateLabel}>{t('fromDate')} (YYYY-MM-DD)</Text>
+            <TextInput
+              style={styles.customDateInput}
+              value={fromDateInput}
+              onChangeText={setFromDateInput}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.text.muted}
+            />
+          </View>
+          <View style={styles.customDateCol}>
+            <Text style={styles.customDateLabel}>{t('toDate')} (YYYY-MM-DD)</Text>
+            <TextInput
+              style={styles.customDateInput}
+              value={toDateInput}
+              onChangeText={setToDateInput}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.text.muted}
+            />
+          </View>
+        </View>
+      )}
+
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.accent.teal} style={{ marginVertical: 32 }} />
+      ) : (
+        <>
+          {/* Summary Cards Horizontal Scroll */}
+          {reportTotals && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cardsScroll}>
+              <View style={styles.statCard}>
+                <Text style={styles.statLabel}>{t('totalRevenue')}</Text>
+                <Text style={[styles.statValue, { color: colors.accent.teal }]}>
+                  {formatMoney(reportTotals.totalRevenue)}
+                </Text>
+              </View>
+
+              <View style={styles.statCard}>
+                <Text style={styles.statLabel}>{t('totalExpenses')}</Text>
+                <Text style={[styles.statValue, { color: colors.debt }]}>
+                  {formatMoney(reportTotals.totalExpenses)}
+                </Text>
+              </View>
+
+              <View style={styles.statCard}>
+                <Text style={styles.statLabel}>{t('netProfit')}</Text>
+                <Text
+                  style={[
+                    styles.statValue,
+                    {
+                      color:
+                        reportTotals.profit >= 0 ? colors.accent.teal : colors.debt,
+                    },
+                  ]}
+                >
+                  {formatMoney(reportTotals.profit)}
+                </Text>
+              </View>
+
+              <View style={[styles.statCard, { borderLeftColor: colors.text.secondary }]}>
+                <Text style={styles.statLabel}>{t('daysRecorded')}</Text>
+                <Text style={[styles.statValue, { color: colors.text.primary }]}>
+                  {reportTotals.dayCount}
+                </Text>
+              </View>
+            </ScrollView>
+          )}
+
+          {/* Sales Trend Chart */}
+          <SalesTrendChart summaries={summaries} />
+
+          {/* Revenue Breakdown */}
+          {reportTotals && reportTotals.totalRevenue > 0 && (
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>{t('revenueBreakdown')}</Text>
+
+              <View style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>💵 {t('cashSales')}</Text>
+                <Text style={styles.breakdownValue}>
+                  {formatMoney(reportTotals.totalCashSales)} (
+                  {Math.round((reportTotals.totalCashSales / reportTotals.totalRevenue) * 100)}%)
+                </Text>
+              </View>
+
+              <View style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>📱 {t('mpesaSales')}</Text>
+                <Text style={styles.breakdownValue}>
+                  {formatMoney(reportTotals.totalMpesaSales)} (
+                  {Math.round((reportTotals.totalMpesaSales / reportTotals.totalRevenue) * 100)}%)
+                </Text>
+              </View>
+
+              <View style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>🤝 {t('creditIssued')}</Text>
+                <Text style={styles.breakdownValue}>
+                  {formatMoney(reportTotals.totalCreditIssued)} (
+                  {Math.round((reportTotals.totalCreditIssued / reportTotals.totalRevenue) * 100)}%)
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Expenses By Category */}
+          {reportTotals && reportTotals.totalExpenses > 0 && (
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>{t('expensesByCategory')}</Text>
+
+              {EXPENSE_CATEGORIES.map((cat) => {
+                const catAmount = reportTotals.expenseBreakdown[cat] || 0;
+                if (catAmount <= 0) return null;
+
+                const percentage = Math.round((catAmount / reportTotals.totalExpenses) * 100);
+                const categoryTranslationKey = `category${cat.charAt(0).toUpperCase() + cat.slice(1)}` as any;
+                const label = t(categoryTranslationKey) || EXPENSE_CATEGORY_LABELS[cat];
+
+                return (
+                  <View key={cat} style={styles.expenseCatRow}>
+                    <View style={styles.expenseCatHeader}>
+                      <Text style={styles.expenseCatLabel}>{label}</Text>
+                      <Text style={styles.expenseCatAmount}>
+                        {formatMoney(catAmount)} ({percentage}%)
+                      </Text>
+                    </View>
+                    <View style={styles.barBg}>
+                      <View style={[styles.barFill, { width: `${percentage}%` }]} />
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Daily Entries List Section Header */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>{t('dailyEntries')}</Text>
+            {summaries.length === 0 && (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>{t('noEntriesForPeriod')}</Text>
+                <Pressable style={styles.emptyAddBtn} onPress={() => handleOpenEntry()}>
+                  <Ionicons name="add-circle" size={18} color={colors.white} />
+                  <Text style={styles.emptyAddBtnText}>{t('todaySummary')}</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </>
+      )}
+    </>
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: DailySummaryWithExpenses }) => (
+      <DayRow summary={item} onPress={handleOpenEntry} />
+    ),
+    [handleOpenEntry]
+  );
+
+  const keyExtractor = useCallback((item: DailySummaryWithExpenses) => item.id, []);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -132,193 +322,18 @@ export function SalesReportScreen() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Period Pills */}
-        <View style={styles.periodRow}>
-          {(['today', 'thisWeek', 'thisMonth', 'custom'] as PeriodOption[]).map((p) => {
-            const isSelected = period === p;
-            const labelKey = p as any;
-            return (
-              <Pressable
-                key={p}
-                onPress={() => {
-                  setPeriod(p);
-                  if (p === 'custom' && !fromDateInput) {
-                    const todayStr = getTodayDateString();
-                    setFromDateInput(todayStr);
-                    setToDateInput(todayStr);
-                  }
-                }}
-                style={[styles.periodPill, isSelected && styles.periodPillSelected]}
-              >
-                <Text style={[styles.periodPillText, isSelected && styles.periodPillTextSelected]}>
-                  {t(labelKey)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* Custom Range Input */}
-        {period === 'custom' && (
-          <View style={styles.customRangeRow}>
-            <View style={styles.customDateCol}>
-              <Text style={styles.customDateLabel}>{t('fromDate')} (YYYY-MM-DD)</Text>
-              <TextInput
-                style={styles.customDateInput}
-                value={fromDateInput}
-                onChangeText={setFromDateInput}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.text.muted}
-              />
-            </View>
-            <View style={styles.customDateCol}>
-              <Text style={styles.customDateLabel}>{t('toDate')} (YYYY-MM-DD)</Text>
-              <TextInput
-                style={styles.customDateInput}
-                value={toDateInput}
-                onChangeText={setToDateInput}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.text.muted}
-              />
-            </View>
-          </View>
-        )}
-
-        {loading ? (
-          <ActivityIndicator size="large" color={colors.accent.teal} style={{ marginVertical: 32 }} />
-        ) : (
-          <>
-            {/* Summary Cards Horizontal Scroll */}
-            {reportTotals && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cardsScroll}>
-                <View style={styles.statCard}>
-                  <Text style={styles.statLabel}>{t('totalRevenue')}</Text>
-                  <Text style={[styles.statValue, { color: colors.accent.teal }]}>
-                    {formatMoney(reportTotals.totalRevenue)}
-                  </Text>
-                </View>
-
-                <View style={styles.statCard}>
-                  <Text style={styles.statLabel}>{t('totalExpenses')}</Text>
-                  <Text style={[styles.statValue, { color: colors.debt }]}>
-                    {formatMoney(reportTotals.totalExpenses)}
-                  </Text>
-                </View>
-
-                <View style={styles.statCard}>
-                  <Text style={styles.statLabel}>{t('netProfit')}</Text>
-                  <Text
-                    style={[
-                      styles.statValue,
-                      {
-                        color:
-                          reportTotals.profit >= 0 ? colors.accent.teal : colors.debt,
-                      },
-                    ]}
-                  >
-                    {formatMoney(reportTotals.profit)}
-                  </Text>
-                </View>
-
-                <View style={[styles.statCard, { borderLeftColor: colors.text.secondary }]}>
-                  <Text style={styles.statLabel}>{t('daysRecorded')}</Text>
-                  <Text style={[styles.statValue, { color: colors.text.primary }]}>
-                    {reportTotals.dayCount}
-                  </Text>
-                </View>
-              </ScrollView>
-            )}
-
-            {/* Sales Trend Chart */}
-            <SalesTrendChart summaries={summaries} />
-
-            {/* Revenue Breakdown */}
-            {reportTotals && reportTotals.totalRevenue > 0 && (
-              <View style={styles.sectionContainer}>
-                <Text style={styles.sectionTitle}>{t('revenueBreakdown')}</Text>
-
-                <View style={styles.breakdownRow}>
-                  <Text style={styles.breakdownLabel}>💵 {t('cashSales')}</Text>
-                  <Text style={styles.breakdownValue}>
-                    {formatMoney(reportTotals.totalCashSales)} (
-                    {Math.round((reportTotals.totalCashSales / reportTotals.totalRevenue) * 100)}%)
-                  </Text>
-                </View>
-
-                <View style={styles.breakdownRow}>
-                  <Text style={styles.breakdownLabel}>📱 {t('mpesaSales')}</Text>
-                  <Text style={styles.breakdownValue}>
-                    {formatMoney(reportTotals.totalMpesaSales)} (
-                    {Math.round((reportTotals.totalMpesaSales / reportTotals.totalRevenue) * 100)}%)
-                  </Text>
-                </View>
-
-                <View style={styles.breakdownRow}>
-                  <Text style={styles.breakdownLabel}>🤝 {t('creditIssued')}</Text>
-                  <Text style={styles.breakdownValue}>
-                    {formatMoney(reportTotals.totalCreditIssued)} (
-                    {Math.round((reportTotals.totalCreditIssued / reportTotals.totalRevenue) * 100)}%)
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Expenses By Category */}
-            {reportTotals && reportTotals.totalExpenses > 0 && (
-              <View style={styles.sectionContainer}>
-                <Text style={styles.sectionTitle}>{t('expensesByCategory')}</Text>
-
-                {EXPENSE_CATEGORIES.map((cat) => {
-                  const catAmount = reportTotals.expenseBreakdown[cat] || 0;
-                  if (catAmount <= 0) return null;
-
-                  const percentage = Math.round((catAmount / reportTotals.totalExpenses) * 100);
-                  const categoryTranslationKey = `category${cat.charAt(0).toUpperCase() + cat.slice(1)}` as any;
-                  const label = t(categoryTranslationKey) || EXPENSE_CATEGORY_LABELS[cat];
-
-                  return (
-                    <View key={cat} style={styles.expenseCatRow}>
-                      <View style={styles.expenseCatHeader}>
-                        <Text style={styles.expenseCatLabel}>{label}</Text>
-                        <Text style={styles.expenseCatAmount}>
-                          {formatMoney(catAmount)} ({percentage}%)
-                        </Text>
-                      </View>
-                      <View style={styles.barBg}>
-                        <View style={[styles.barFill, { width: `${percentage}%` }]} />
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-
-            {/* Daily Entries List */}
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>{t('dailyEntries')}</Text>
-
-              {summaries.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateText}>{t('noEntriesForPeriod')}</Text>
-                  <Pressable style={styles.emptyAddBtn} onPress={() => handleOpenEntry()}>
-                    <Ionicons name="add-circle" size={18} color={colors.white} />
-                    <Text style={styles.emptyAddBtnText}>{t('todaySummary')}</Text>
-                  </Pressable>
-                </View>
-              ) : (
-                summaries.map((item) => (
-                  <DayRow
-                    key={item.id}
-                    summary={item}
-                    onPress={() => handleOpenEntry(item.date)}
-                  />
-                ))
-              )}
-            </View>
-          </>
-        )}
-      </ScrollView>
+      <FlatList
+        data={loading ? [] : summaries}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        ListHeaderComponent={renderHeader}
+        contentContainerStyle={styles.scrollContent}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        initialNumToRender={10}
+        scrollEventThrottle={16}
+      />
 
       {/* FAB — fixed to bottom right, above tab bar */}
       <Pressable

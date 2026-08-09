@@ -13,27 +13,31 @@ import { formatMoney } from '../../utils/money';
 
 interface DayRowProps {
   summary: DailySummaryWithExpenses;
-  onPress: () => void;
+  onPress: (date?: string) => void;
 }
 
-export function DayRow({ summary, onPress }: DayRowProps) {
-  const { colors } = useThemeContext();
-  const styles = makeStyles(colors);
+// Format date string "YYYY-MM-DD" into "Mon 14 Jul"
+function formatDateLabel(dateStr: string): string {
+  try {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    return dateObj.toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+  } catch {
+    return dateStr;
+  }
+}
 
-  // Format date string "YYYY-MM-DD" into "Mon 14 Jul"
-  const formatDateLabel = (dateStr: string) => {
-    try {
-      const [y, m, d] = dateStr.split('-').map(Number);
-      const dateObj = new Date(y, m - 1, d);
-      return dateObj.toLocaleDateString('en-GB', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-      });
-    } catch {
-      return dateStr;
-    }
-  };
+export const DayRow = React.memo(function DayRow({ summary, onPress }: DayRowProps) {
+  const { colors } = useThemeContext();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+
+  const handlePress = React.useCallback(() => {
+    onPress(summary.date);
+  }, [onPress, summary.date]);
 
   const isPositive = summary.profit > 0;
   const isNegative = summary.profit < 0;
@@ -46,7 +50,7 @@ export function DayRow({ summary, onPress }: DayRowProps) {
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.leftCol}>
@@ -66,7 +70,7 @@ export function DayRow({ summary, onPress }: DayRowProps) {
       </View>
     </Pressable>
   );
-}
+});
 
 const makeStyles = (colors: Colors) =>
   StyleSheet.create({

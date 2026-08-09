@@ -69,18 +69,18 @@ interface AddTransactionModalProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function AddTransactionModal({
+export const AddTransactionModal = React.memo(function AddTransactionModal({
   visible,
   type,
   customerId,
-  onSuccess,
   onClose,
+  onSuccess,
 }: AddTransactionModalProps) {
   const { colors } = useThemeContext();
   const { profile } = useShopProfile();
   const { t } = useLanguage();
   const currency = profile?.currency || 'KES';
-  const styles = makeStyles(colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   // numpadValue is a string — see Numpad.tsx for why strings, not numbers
   const [numpadValue, setNumpadValue] = useState('');
@@ -184,10 +184,9 @@ export function AddTransactionModal({
       transparent                // background shows through (we color the sheet)
       onRequestClose={handleClose}  // Android back button dismisses modal
     >
-      {/* Overlay: semi-transparent backdrop */}
-      <Pressable style={styles.overlay} onPress={handleClose}>
-        {/* Stop tap propagation — tapping the sheet shouldn't close it */}
-        <Pressable style={styles.sheet} onPress={() => {}}>
+      <View style={styles.overlay}>
+        <Pressable style={styles.backdrop} onPress={handleClose} />
+        <View style={styles.sheet}>
 
           {/* Drag handle — visual affordance that this is swipeable */}
           <View style={styles.dragHandle} />
@@ -246,19 +245,22 @@ export function AddTransactionModal({
             )}
           </Pressable>
 
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
-}
+});
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const makeStyles = (colors: Colors) => StyleSheet.create({
   overlay: {
     flex: 1,
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'flex-end',    // sheet sits at the bottom
   },
   sheet: {
     backgroundColor: colors.background.secondary,

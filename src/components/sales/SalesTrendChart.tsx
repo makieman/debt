@@ -36,7 +36,7 @@ function formatDateLabel(dateStr: string): string {
   }
 }
 
-export function SalesTrendChart({ summaries }: SalesTrendChartProps) {
+export const SalesTrendChart = React.memo(function SalesTrendChart({ summaries }: SalesTrendChartProps) {
   const { colors } = useThemeContext();
   const { t } = useLanguage();
   const { width } = useWindowDimensions();
@@ -124,7 +124,7 @@ export function SalesTrendChart({ summaries }: SalesTrendChartProps) {
       </View>
 
       {/* Skia Victory Native Chart Box */}
-      <View style={styles.chartBox}>
+      <View style={styles.chartBox} pointerEvents="none">
         <CartesianChart
           data={formattedData}
           xKey="day"
@@ -166,7 +166,7 @@ export function SalesTrendChart({ summaries }: SalesTrendChartProps) {
       </View>
     </View>
   );
-}
+});
 
 const makeStyles = (colors: Colors) =>
   StyleSheet.create({

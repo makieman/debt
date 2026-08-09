@@ -319,16 +319,17 @@ export function PinScreen({ mode, onSuccess, onCancel, enteredPin }: PinScreenPr
 
   const handleDigit = useCallback((digit: string) => {
     if (isLockedOut || isProcessing) return;
-    if (currentPin.length >= 4) return;
-
-    const newPin = currentPin + digit;
-    setCurrentPin(newPin);
-
-    if (newPin.length === 4) {
-      // Brief delay so the 4th dot animates before we process
-      setTimeout(() => handlePinComplete(newPin), 100);
-    }
-  }, [currentPin, isLockedOut, isProcessing, handlePinComplete]);
+    
+    setCurrentPin(prev => {
+      if (prev.length >= 4) return prev;
+      const newPin = prev + digit;
+      if (newPin.length === 4) {
+        // Brief delay so the 4th dot animates before we process
+        setTimeout(() => handlePinComplete(newPin), 100);
+      }
+      return newPin;
+    });
+  }, [isLockedOut, isProcessing, handlePinComplete]);
 
   const handleBackspace = useCallback(() => {
     if (isLockedOut || isProcessing) return;
@@ -412,80 +413,17 @@ export function PinScreen({ mode, onSuccess, onCancel, enteredPin }: PinScreenPr
                 const isEmpty = key === null;
                 const isBio = isEmpty && showBiometric && mode === 'unlock';
 
-                // Empty placeholder cell
-                if (isEmpty && !isBio) {
-                  return (
-                    <View key={`empty-${colIndex}`} style={styles.key}>
-                      <View style={[styles.keyCircle, { backgroundColor: 'transparent', borderColor: 'transparent' }]} />
-                    </View>
-                  );
-                }
-
-                // Biometric key cell
-                if (isBio) {
-                  return (
-                    <Pressable
-                      key="biometric"
-                      style={({ pressed }) => [
-                        styles.key,
-                        pressed && styles.keyPressed,
-                      ]}
-                      onPress={handleBiometric}
-                      disabled={isLockedOut}
-                    >
-                      <View style={[styles.keyCircle, { backgroundColor: 'transparent', borderColor: 'transparent' }]}>
-                        <Ionicons
-                          name="finger-print"
-                          size={28}
-                          color={isLockedOut ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)'}
-                        />
-                      </View>
-                    </Pressable>
-                  );
-                }
-
-                // Backspace key
-                if (key === '\u232B') {
-                  return (
-                    <Pressable
-                      key="backspace"
-                      style={({ pressed }) => [
-                        styles.key,
-                        pressed && styles.keyPressed,
-                      ]}
-                      onPress={handleBackspace}
-                      disabled={isLockedOut}
-                    >
-                      <View style={styles.keyCircle}>
-                        <Ionicons
-                          name="backspace-outline"
-                          size={24}
-                          color={isLockedOut ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.8)'}
-                        />
-                      </View>
-                    </Pressable>
-                  );
-                }
-
-                // Digit key — key is guaranteed non-null here, but we narrow
-                // explicitly so TypeScript understands it's a string.
-                if (key === null) return null;
                 return (
-                  <Pressable
-                    key={key}
-                    style={({ pressed }) => [
-                      styles.key,
-                      pressed && !isLockedOut && styles.keyPressed,
-                    ]}
-                    onPress={() => handleDigit(key)}
+                  <PinKey
+                    key={key ?? `empty-${colIndex}`}
+                    label={key}
+                    isBio={isBio}
+                    isBackspace={key === '\u232B'}
+                    onDigit={handleDigit}
+                    onBackspace={handleBackspace}
+                    onBio={handleBiometric}
                     disabled={isLockedOut}
-                  >
-                    <View style={styles.keyCircle}>
-                      <Text style={[styles.keyText, isLockedOut && styles.keyTextDisabled]}>
-                        {key}
-                      </Text>
-                    </View>
-                  </Pressable>
+                  />
                 );
               })}
             </View>
@@ -499,14 +437,78 @@ export function PinScreen({ mode, onSuccess, onCancel, enteredPin }: PinScreenPr
   );
 }
 
+// ─── PinKey Component ────────────────────────────────────────────────────────
+
+interface PinKeyProps {
+  label: string | null;
+  isBio: boolean;
+  isBackspace: boolean;
+  onDigit: (digit: string) => void;
+  onBackspace: () => void;
+  onBio: () => void;
+  disabled: boolean;
+}
+
+const PinKey = React.memo(function PinKey({ label, isBio, isBackspace, onDigit, onBackspace, onBio, disabled }: PinKeyProps) {
+  const [isPressed, setIsPressed] = React.useState(false);
+
+  const handlePress = useCallback(() => {
+    if (isBio) onBio();
+    else if (isBackspace) onBackspace();
+    else if (label !== null) onDigit(label);
+  }, [isBio, isBackspace, label, onBio, onBackspace, onDigit]);
+
+  if (label === null && !isBio) {
+    return (
+      <View style={styles.key}>
+        <View style={[styles.keyCircle, { backgroundColor: 'transparent', borderColor: 'transparent' }]} />
+      </View>
+    );
+  }
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      onPressIn={() => setIsPressed(true)}
+      onPressOut={() => setIsPressed(false)}
+      disabled={disabled}
+      style={styles.key}
+    >
+      <View style={[
+        styles.keyCircle, 
+        isBio && { backgroundColor: 'transparent', borderColor: 'transparent' },
+        isPressed && !disabled && styles.keyCirclePressed
+      ]}>
+        {isBio ? (
+          <Ionicons
+            name="finger-print"
+            size={32}
+            color={disabled ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)'}
+          />
+        ) : isBackspace ? (
+          <Ionicons
+            name="backspace-outline"
+            size={28}
+            color={disabled ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.8)'}
+          />
+        ) : (
+          <Text style={[styles.keyText, disabled && styles.keyTextDisabled]}>
+            {label}
+          </Text>
+        )}
+      </View>
+    </Pressable>
+  );
+});
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MAX_ATTEMPTS = 5;
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 
-const KEY_SIZE = 72;
-const KEY_CIRCLE = 68;
+const KEY_SIZE = 80;
+const KEY_CIRCLE = 76;
 
 const styles = StyleSheet.create({
   container: {
@@ -618,20 +620,21 @@ const styles = StyleSheet.create({
   // ── Numpad ──
   numpad: {
     width: '100%',
-    maxWidth: 360,
+    maxWidth: 340,
     alignSelf: 'center',
-    gap: 8,
+    paddingVertical: 10,
   },
   numpadRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     width: '100%',
+    marginBottom: 16,
   },
   numpadDisabled: {
     opacity: 0.3,
   },
   key: {
-    flex: 1,
+    width: '33.33%',
     height: KEY_SIZE,
     justifyContent: 'center',
     alignItems: 'center',
@@ -641,30 +644,22 @@ const styles = StyleSheet.create({
     height: KEY_CIRCLE,
     borderRadius: KEY_CIRCLE / 2,
     backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.12)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  keyPressed: {
-    opacity: 0.4,
+  keyCirclePressed: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    transform: [{ scale: 0.92 }],
   },
   keyText: {
     color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '400',
-    letterSpacing: 0.5,
+    fontSize: 32,
+    fontWeight: '500',
   },
   keyTextDisabled: {
     color: 'rgba(255,255,255,0.3)',
-  },
-
-  bioKey: {
-    width: KEY_CIRCLE,
-    height: KEY_CIRCLE,
-    borderRadius: KEY_CIRCLE / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
   bottomPad: { height: 16 },

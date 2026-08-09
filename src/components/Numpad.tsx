@@ -1,11 +1,22 @@
 /**
  * src/components/Numpad.tsx
  *
- * Professional circular phone-dialer style numpad for Credi.
- * Optimized with custom React.memo comparator for 0ms tap latency.
+ * Professional circular phone-dialer style numpad for Duka Deni.
+ *
+ * PERFORMANCE NOTE — why styles live in Numpad, not NumpadKey:
+ *
+ * Each keypress triggers a state update in the parent (e.g. AddTransactionModal).
+ * If NumpadKey calls useThemeContext() + makeStyles() internally, that causes
+ * 12 separate StyleSheet.create() calls on every keypress — one per key.
+ * StyleSheet.create() serialises styles over the JS-Native bridge and is NOT free.
+ *
+ * Fix: compute styles ONCE in Numpad (with useMemo) and pass them down as a
+ * stable prop. NumpadKey receives a pre-built styles object and never calls
+ * makeStyles or useThemeContext itself. Combined with the ThemeContext.Provider
+ * useMemo fix, the keys are completely skipped by React on every keypress.
  */
 
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -44,7 +55,10 @@ const KEY_SUB_LABELS: Record<string, string> = {
 
 export function Numpad({ value, onChange, maxLength = 7 }: NumpadProps) {
   const { colors, isDark } = useThemeContext();
-  const styles = makeStyles(colors, isDark);
+
+  // ONE StyleSheet.create() per theme change, not per keypress.
+  // Without useMemo this ran on every render (every keystroke).
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
 
   const valueRef = useRef(value);
   valueRef.current = value;
@@ -96,6 +110,10 @@ export function Numpad({ value, onChange, maxLength = 7 }: NumpadProps) {
               subLabel={KEY_SUB_LABELS[key]}
               onPress={handleKeyPress}
               isBackspace={key === '⌫'}
+              styles={styles}
+              isDark={isDark}
+              primaryColor={colors.text.primary}
+              mutedColor={colors.text.muted}
             />
           ))}
         </View>
@@ -104,41 +122,55 @@ export function Numpad({ value, onChange, maxLength = 7 }: NumpadProps) {
   );
 }
 
+// ─── NumpadKey ────────────────────────────────────────────────────────────────
+
+type NumpadStyles = ReturnType<typeof makeStyles>;
+
 interface NumpadKeyProps {
   label: string;
   subLabel?: string;
   onPress: (key: string) => void;
   isBackspace: boolean;
+  // Styles computed once by parent — avoids 12× StyleSheet.create per keypress
+  styles: NumpadStyles;
+  isDark: boolean;
+  primaryColor: string;
+  mutedColor: string;
 }
 
 const NumpadKey = React.memo(
-  function NumpadKey({ label, subLabel, onPress, isBackspace }: NumpadKeyProps) {
-    const { colors, isDark } = useThemeContext();
-    const styles = makeStyles(colors, isDark);
-
+  function NumpadKey({
+    label,
+    subLabel,
+    onPress,
+    isBackspace,
+    styles,
+    isDark,
+    primaryColor,
+    mutedColor,
+  }: NumpadKeyProps) {
     const handlePress = useCallback(() => {
       onPress(label);
     }, [label, onPress]);
 
+    const [isPressed, setIsPressed] = React.useState(false);
+
     return (
       <Pressable
         onPress={handlePress}
-        android_ripple={{
-          color: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.15)',
-          borderless: true,
-          radius: 35,
-        }}
-        style={({ pressed }) => [
+        onPressIn={() => setIsPressed(true)}
+        onPressOut={() => setIsPressed(false)}
+        style={[
           styles.keyCircle,
           isBackspace && styles.actionKeyCircle,
           label === '.' && styles.actionKeyCircle,
-          pressed && styles.keyPressed,
+          isPressed && styles.keyPressed,
         ]}
         accessibilityLabel={isBackspace ? 'backspace' : label}
         accessibilityRole="button"
       >
         {isBackspace ? (
-          <Ionicons name="backspace-outline" size={26} color={colors.text.primary} />
+          <Ionicons name="backspace-outline" size={26} color={primaryColor} />
         ) : (
           <View style={styles.keyTextCol}>
             <Text style={[styles.keyLabel, label === '.' && styles.dotLabel]}>
@@ -152,11 +184,21 @@ const NumpadKey = React.memo(
       </Pressable>
     );
   },
+  // Custom comparator: keys never need to re-render during typing because
+  // their label/subLabel/isBackspace are constants, and styles/colors only
+  // change when the theme switches — which is rare.
   (prev, next) =>
     prev.label === next.label &&
     prev.subLabel === next.subLabel &&
-    prev.isBackspace === next.isBackspace
+    prev.isBackspace === next.isBackspace &&
+    prev.styles === next.styles &&
+    prev.isDark === next.isDark &&
+    prev.primaryColor === next.primaryColor &&
+    prev.mutedColor === next.mutedColor &&
+    prev.onPress === next.onPress
 );
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const makeStyles = (colors: Colors, isDark: boolean) =>
   StyleSheet.create({
@@ -173,9 +215,9 @@ const makeStyles = (colors: Colors, isDark: boolean) =>
       marginBottom: 14,
     },
     keyCircle: {
-      width: 70,
-      height: 70,
-      borderRadius: 35,
+      width: 74,
+      height: 74,
+      borderRadius: 37,
       backgroundColor: isDark ? '#2D3748' : '#F1F5F9',
       alignItems: 'center',
       justifyContent: 'center',
@@ -199,10 +241,10 @@ const makeStyles = (colors: Colors, isDark: boolean) =>
       justifyContent: 'center',
     },
     keyLabel: {
-      fontSize: 26,
-      fontWeight: '600',
-      color: colors.text.primary,
-      lineHeight: 28,
+      fontSize: 32,
+      fontWeight: '700',
+      color: isDark ? '#FFFFFF' : '#000000',
+      lineHeight: 34,
     },
     dotLabel: {
       fontSize: 30,

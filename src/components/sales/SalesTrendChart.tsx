@@ -9,6 +9,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { CartesianChart, Bar } from 'victory-native';
+import { useFont } from '@shopify/react-native-skia';
 import { DailySummaryWithExpenses } from '../../types';
 import { useThemeContext, Colors } from '../../theme';
 import { useLanguage } from '../../store/LanguageContext';
@@ -40,6 +41,7 @@ export function SalesTrendChart({ summaries }: SalesTrendChartProps) {
   const { t } = useLanguage();
   const { width } = useWindowDimensions();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const font = useFont(require('../../../assets/fonts/arial.ttf'), 11);
 
   const chartWidth = Math.max(280, width - 40);
 
@@ -95,8 +97,9 @@ export function SalesTrendChart({ summaries }: SalesTrendChartProps) {
   const barWidth = Math.min(28, Math.max(12, (chartWidth - 60) / Math.max(formattedData.length, 5)));
 
   // Explicit domain ceiling — without this, a single bar fills 100% height (solid block)
+  // Math.max(..., 1) prevents domainMax=0 when all values are zero
   const maxDataValue = formattedData.reduce((acc, d) => Math.max(acc, d.revenue), 0);
-  const domainMax = maxDataValue > 0 ? Math.ceil(maxDataValue * 1.2) : 100;
+  const domainMax = Math.ceil(Math.max(maxDataValue, 1) * 1.3);
 
   return (
     <View style={styles.container}>
@@ -126,14 +129,20 @@ export function SalesTrendChart({ summaries }: SalesTrendChartProps) {
           data={formattedData}
           xKey="day"
           yKeys={['revenue']}
-          domainPadding={{ left: 30, right: 30 }}
+          domainPadding={{ left: 30, right: 30, top: 20 }}
           domain={{ y: [0, domainMax] }}
           xAxis={{
-            font: undefined,
+            font: font || undefined,
             labelColor: colors.text.secondary,
             lineColor: colors.background.tertiary,
             labelOffset: 6,
           }}
+          yAxis={[{
+            font: font || undefined,
+            labelColor: colors.text.secondary,
+            lineColor: colors.background.tertiary,
+            labelOffset: 6,
+          }]}
         >
           {({ points, chartBounds }) => (
             <Bar

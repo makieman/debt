@@ -79,7 +79,7 @@ export function AddExpenseSheet({ visible, onAdd, onClose }: AddExpenseSheetProp
 
   return (
     <Modal
-      visible={visible}
+        visible={visible}
       animationType="slide"
       transparent={true}
       onRequestClose={handleClose}

@@ -416,7 +416,7 @@ export async function getDailyTotals(
 export async function getAllCustomersWithBalances(
   db: SQLiteDatabase
 ): Promise<import('../types').CustomerWithBalance[]> {
-  console.log('[DB] getAllCustomersWithBalances — single query for all customers+balances');
+  // console.log('[DB] getAllCustomersWithBalances — single query for all customers+balances');
   const rows = await db.getAllAsync<import('../types').CustomerWithBalance>(
     `SELECT
        c.id,

@@ -29,7 +29,7 @@
  * Calling onClose() first would mean the screen shows stale data.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -259,7 +259,7 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     justifyContent: 'flex-end',
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   sheet: {

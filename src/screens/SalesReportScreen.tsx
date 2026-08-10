@@ -309,7 +309,7 @@ export function SalesReportScreen() {
     [handleOpenEntry]
   );
 
-  const keyExtractor = useCallback((item: DailySummaryWithExpenses) => item.id, []);
+  const keyExtractor = useCallback((item: DailySummaryWithExpenses) => String(item.id), []);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

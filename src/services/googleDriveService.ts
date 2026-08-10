@@ -106,10 +106,10 @@ export interface DriveUploadResult {
  */
 export async function connectGoogleDrive(): Promise<boolean> {
   try {
-    // Use Expo's proxy helper to redirect through https://auth.expo.io.
-    // This allows using a Web OAuth Client ID since Google requires redirect URIs to be HTTPS.
+    // Construct redirect URI using Google reversed client ID scheme to satisfy Google's OAuth 2.0 policy
     const redirectUri = AuthSession.makeRedirectUri({
-      native: 'https://auth.expo.io/@mano2.0/duka-deni',
+      scheme: 'com.googleusercontent.apps.104870381302-up3c4p6td5rt0sk70cnvqitf0llshdbq',
+      path: 'oauthredirect',
     });
 
     // Create the auth request with PKCE
@@ -127,7 +127,7 @@ export async function connectGoogleDrive(): Promise<boolean> {
     const result = await request.promptAsync(discovery);
 
     if (result.type !== 'success') {
-      console.log('[googleDriveService] OAuth cancelled or failed:', result.type);
+      // console.log('[googleDriveService] OAuth cancelled or failed:', result.type);
       return false;
     }
 
@@ -148,7 +148,7 @@ export async function connectGoogleDrive(): Promise<boolean> {
     // Save token to SecureStore
     const expiresIn = tokenResult.expiresIn ?? 3600; // default 1 hour
     await saveGoogleToken(tokenResult.accessToken, expiresIn);
-    console.log('[googleDriveService] Connected to Google Drive successfully');
+    // console.log('[googleDriveService] Connected to Google Drive successfully');
     return true;
   } catch (e) {
     console.error('[googleDriveService] connectGoogleDrive error:', e);
@@ -164,7 +164,7 @@ export async function connectGoogleDrive(): Promise<boolean> {
  */
 export async function disconnectGoogleDrive(): Promise<void> {
   await clearGoogleToken();
-  console.log('[googleDriveService] Disconnected from Google Drive');
+  // console.log('[googleDriveService] Disconnected from Google Drive');
 }
 
 // ─── FUNCTION 3: uploadBackupToDrive ─────────────────────────────────────────
@@ -190,7 +190,7 @@ export async function uploadBackupToDrive(
   // Step 1: Get a valid access token. If expired or missing, skip silently.
   const token = await getValidGoogleToken();
   if (!token) {
-    console.log('[googleDriveService] No valid token — skipping Drive upload');
+    // console.log('[googleDriveService] No valid token — skipping Drive upload');
     return { success: false, error: 'No valid token' };
   }
 

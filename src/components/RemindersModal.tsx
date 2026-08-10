@@ -62,7 +62,7 @@ const DebtorCardItem = React.memo(function DebtorCardItem({
 }: {
   debtor: TopDebtor;
   currency: string;
-  t: (key: string) => string;
+  t: (key: any) => string;
   onWhatsApp: (debtor: TopDebtor) => void;
   onSelectCustomer?: (customerId: number) => void;
   styles: ReturnType<typeof makeStyles>;
@@ -262,7 +262,7 @@ const makeStyles = (colors: Colors) =>
       justifyContent: 'flex-end',
     },
     backdrop: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     sheet: {

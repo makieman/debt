@@ -68,7 +68,7 @@ import {
 // ─── CONFIGURE THIS ───────────────────────────────────────────────────────────
 // Paste your Google Cloud OAuth Client ID here.
 // It looks like: 123456789012-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com
-const GOOGLE_CLIENT_ID = '104870381302-up3c4p6td5rt0sk70cnvqitf0llshdbq.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '104870381302-p5p3k8kjcnusuulpid6h7q27uhtpvrfp.apps.googleusercontent.com';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -106,10 +106,9 @@ export interface DriveUploadResult {
  */
 export async function connectGoogleDrive(): Promise<boolean> {
   try {
-    // Construct redirect URI using Google reversed client ID scheme to satisfy Google's OAuth 2.0 policy
+    // Construct redirect URI using Expo auth proxy (https://auth.expo.io/@avatarmano/duka-deni)
     const redirectUri = AuthSession.makeRedirectUri({
-      scheme: 'com.googleusercontent.apps.104870381302-up3c4p6td5rt0sk70cnvqitf0llshdbq',
-      path: 'oauthredirect',
+      native: 'https://auth.expo.io/@avatarmano/duka-deni',
     });
 
     // Create the auth request with PKCE

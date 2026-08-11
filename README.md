@@ -1,6 +1,6 @@
 # Credi — Shop Credit & Daily Sales Tracker
 
-> A mobile-first tool that helps small shop owners track customer credit, record daily sales, and never lose money to forgotten debts.
+> A mobile-first tool that helps shop owners track customer credit, record daily sales, and never lose money to forgotten debts.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Expo SDK](https://img.shields.io/badge/Expo-SDK%2056-000020?logo=expo)](https://docs.expo.dev/versions/v56.0.0/)
@@ -32,8 +32,6 @@ The app answers three everyday business questions:
 1. **How much money is owed to me?** — Customer credit dashboard
 2. **How did the shop perform today?** — Daily cash, M-Pesa, and expense logging
 3. **What is the trend?** — Weekly sales charts and top-debtor rankings
-
----
 
 ## Features
 

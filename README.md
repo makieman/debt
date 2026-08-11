@@ -75,8 +75,6 @@ The app answers three everyday business questions:
 ---
 
 ## Project Structure
-
-```
 credi/
 ├── src/
 │   ├── components/       # Reusable UI components (Numpad, CustomerCard, charts…)

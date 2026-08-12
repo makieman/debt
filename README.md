@@ -36,7 +36,6 @@ The app answers three everyday business questions:
 ## Features
 
 | Category | Details |
-|---|---|
 | 📊 **Dashboard** | Total receivables, amount collected, outstanding balance, recent activity feed |
 | 👥 **Customer Management** | Add / edit / soft-delete customers, full transaction history per customer |
 | 💸 **Credit Tracking** | Record debts and payments with a custom numpad, add notes |

@@ -43,8 +43,7 @@ The app answers three everyday business questions:
 | 📈 **Sales Reports** | Weekly chart (Victory Native + Skia), top debtors, daily summary history |
 | 🔔 **Reminders** | Modal to view and act on overdue credit balances |
 | 📤 **Export** | Export all data as **XLSX** or **JSON** via the native share sheet |
-| 📥 **Import** | Restore data from a JSON backup or Excel file |
-| ☁️ **Google Drive Backup** | Automatic backup to Drive's hidden `appDataFolder` on every export (OAuth 2.0 + PKCE — no client secret needed) |
+| 📥 **Import** | Restore data from a JSON backup or Excel file 
 | 🔒 **PIN & Biometric Lock** | App lock screen using `expo-local-authentication` and `expo-secure-store` |
 | 🌍 **Multilingual** | English (`en`) and Swahili (`sw`) |
 

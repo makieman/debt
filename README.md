@@ -1,6 +1,6 @@
 # Credi — Shop Credit & Daily Sales Tracker
 
-> A mobile-first tool that helps small shop owners track customer credit, record daily sales, and never lose money to forgotten debts.
+> A mobile-first tool that helps shop owners track customer credit, record daily sales, and never lose money to forgotten debts.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Expo SDK](https://img.shields.io/badge/Expo-SDK%2056-000020?logo=expo)](https://docs.expo.dev/versions/v56.0.0/)
@@ -25,7 +25,7 @@
 
 ## Overview
 
-**Credi** (package name `com.lightstorm.credi`) is a React Native / Expo app built for duka (small shop) owners in Kenya and similar markets. It runs **fully offline** with a local SQLite database — no server required. Optional Google Drive integration provides automatic cloud backups.
+**Credi** is a React Native / Expo app built for duka (small shop) owners in Kenya and similar markets. It runs **fully offline** with a local SQLite database  no server required. Optional Google Drive integration provides automatic cloud backups.
 
 The app answers three everyday business questions:
 
@@ -33,12 +33,9 @@ The app answers three everyday business questions:
 2. **How did the shop perform today?** — Daily cash, M-Pesa, and expense logging
 3. **What is the trend?** — Weekly sales charts and top-debtor rankings
 
----
-
 ## Features
 
 | Category | Details |
-|---|---|
 | 📊 **Dashboard** | Total receivables, amount collected, outstanding balance, recent activity feed |
 | 👥 **Customer Management** | Add / edit / soft-delete customers, full transaction history per customer |
 | 💸 **Credit Tracking** | Record debts and payments with a custom numpad, add notes |
@@ -75,8 +72,6 @@ The app answers three everyday business questions:
 ---
 
 ## Project Structure
-
-```
 credi/
 ├── src/
 │   ├── components/       # Reusable UI components (Numpad, CustomerCard, charts…)

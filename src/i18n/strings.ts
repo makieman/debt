@@ -94,6 +94,10 @@ export const translations = {
     failedToSaveError: 'Failed to save. Please try again.',
     saving: 'Saving...',
 
+    // Import from Contacts
+    importFromContacts: 'Import from Contacts',
+    contactPermissionDenied: 'Contact access denied. Please enable it in your device Settings.',
+
     // Add Transaction Modal
     recordDebt: 'Record Debt',
     placeholderNote: 'Add a note (optional) e.g. Unga, Sukari',
@@ -327,6 +331,10 @@ export const translations = {
     enterCustomerNameError: 'Tafadhali weka jina la mteja',
     failedToSaveError: 'Imeshindwa kuhifadhi. Tafadhali jaribu tena.',
     saving: 'Inahifadhi...',
+
+    // Import from Contacts
+    importFromContacts: 'Ingiza kutoka Anwani',
+    contactPermissionDenied: 'Ruhusa ya anwani imekataliwa. Tafadhali iwezesha kwenye Mipangilio ya kifaa chako.',
 
     // Add Transaction Modal
     recordDebt: 'Hifadhi Deni',

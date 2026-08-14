@@ -2,31 +2,25 @@
  * src/components/AddCustomerModal.tsx
  *
  * A bottom-sheet style modal for adding a new customer.
- * Uses React Native's built-in Modal — no third-party library needed for Day 2.
  *
- * ─── CONCEPTS ────────────────────────────────────────────────────────────────
+ * ─── FIXES (Aug 2026) ────────────────────────────────────────────────────────
  *
- * MODAL vs WEB DIALOG:
- * On the web, <dialog> is an HTML element that uses z-index stacking.
- * In React Native, Modal renders in a SEPARATE NATIVE WINDOW LAYER above
- * the app — not just z-index. The modal content is isolated from the app's
- * view hierarchy. This is why you can't accidentally click "through" it.
+ * FIX 1 — KEYBOARD COVERING INPUTS (Android):
+ * On Android, Expo sets windowSoftInputMode to "adjustResize" by default.
+ * This means the OS already shrinks the window height when the keyboard opens.
+ * Using KeyboardAvoidingView with behavior="height" on top of that causes a
+ * DOUBLE SHRINK — the system shrinks AND our KAV shrinks, pushing the bottom
+ * sheet content further down out of view.
+ * Solution: Don't pass a behavior prop on Android (let the OS handle it alone).
+ * On iOS: the window doesn't resize, so we still need behavior="padding".
  *
- * KEYBOARDAVOIDINGVIEW:
- * When the soft keyboard appears, it covers part of the screen.
- * On iOS: the window doesn't resize — we add padding (behavior="padding")
- *   so content shifts up above the keyboard.
- * On Android: the window IS resized by the system already — we shrink
- *   the container height (behavior="height") instead of adding padding,
- *   otherwise content shifts TWICE (system + our code = double shift).
- *
- * CONTROLLED INPUTS:
- * React Native TextInput has no internal state. If you don't pass value=,
- * the displayed text and your React state can diverge — the user clears the
- * input but your state still has the old value (or vice versa). Always use:
- *   value={stateName}
- *   onChangeText={setStateName}
- * This is called a "controlled input" — React controls the value, not the DOM.
+ * FIX 2 — FLASH/FLICKER ON MODAL CLOSE:
+ * Previously, handleSave called resetForm() + onSuccess() + onClose()
+ * synchronously. The modal slide-out animation was still playing while the
+ * parent re-rendered its customer list. This caused a visible flash behind
+ * the still-animating modal.
+ * Solution: Call onClose() first, then delay onSuccess() by ~350 ms so the
+ * modal is fully hidden before the parent re-renders.
  */
 
 import React, { useState, useRef, useEffect } from "react";
@@ -60,53 +54,41 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
   const { colors } = useThemeContext();
   const { t } = useLanguage();
   const styles = makeStyles(colors);
+
   // ── Controlled input state ────────────────────────────────────────────────
-  // Both inputs are controlled: value is always driven by state, never by the
-  // TextInput's internal text. This is required in React Native.
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [nameError, setNameError] = useState("");
   const [saving, setSaving] = useState(false);
 
   // ── Ref for auto-focus ────────────────────────────────────────────────────
-  // We need a ref to imperatively call .focus() on the name input when the
-  // modal opens. We can't use the autoFocus prop because the Modal's animation
-  // hasn't finished when the component first mounts — focus would fire before
-  // the keyboard animation completes, causing a visual glitch.
   const nameInputRef = useRef<TextInput>(null);
 
   // ── Auto-focus when modal becomes visible ─────────────────────────────────
   useEffect(() => {
     if (visible) {
-      // Small delay to let the slide-up animation complete before showing keyboard
       const timer = setTimeout(() => {
         nameInputRef.current?.focus();
       }, 400);
       return () => clearTimeout(timer);
+    } else {
+      setName("");
+      setPhone("");
+      setNameError("");
+      setSaving(false);
     }
   }, [visible]);
 
-  // ── Reset form when closed ───────────────────────────────────────────────
-  // Without this, re-opening the modal would show the previous entry's text.
-  const resetForm = () => {
-    setName("");
-    setPhone("");
-    setNameError("");
-    setSaving(false);
-  };
-
   const handleClose = () => {
-    resetForm();
     onClose();
   };
 
   // ── Validation + save ────────────────────────────────────────────────────
   const handleSave = async () => {
-    // Trim whitespace before validation — "   " should not be a valid name
     const trimmedName = name.trim();
 
     if (!trimmedName) {
-      setNameError(t('enterCustomerNameError'));
+      setNameError(t("enterCustomerNameError"));
       return;
     }
 
@@ -114,13 +96,18 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
       setSaving(true);
       await addCustomer(db, {
         name: trimmedName,
-        phone: phone.trim() || undefined, // empty string → undefined → stored as null
+        phone: phone.trim() || undefined,
       });
-      resetForm();
-      onSuccess(); // tell the parent to refresh the customer list
+
+      // Close modal first — slide-out animation plays for ~300 ms
       onClose();
+
+      // Trigger parent refresh after animation completes to avoid a flash
+      setTimeout(() => {
+        onSuccess();
+      }, 350);
     } catch (error) {
-      setNameError(t('failedToSaveError'));
+      setNameError(t("failedToSaveError"));
       setSaving(false);
     }
   };
@@ -128,49 +115,42 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
   return (
     <Modal
       visible={visible}
-      transparent            // the backdrop behind the sheet is semi-transparent
-      animationType="slide"  // sheet slides up from the bottom
-      onRequestClose={handleClose} // Android back button dismisses modal
+      transparent
+      animationType="slide"
+      onRequestClose={handleClose}
     >
-      {/* ── Backdrop: tap to dismiss ──────────────────────────────────────── */}
       <TouchableWithoutFeedback onPress={handleClose}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
 
-      {/*
-        ── KeyboardAvoidingView ────────────────────────────────────────────────
-        behavior differs per platform:
-          iOS     → "padding": add bottom padding equal to keyboard height
-          Android → "height": shrink the view height to exclude keyboard area
-                    (Android already resizes the window; adding padding doubles it)
-      */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.kavWrapper}
       >
         <View style={styles.sheet}>
 
-          {/* ── Drag handle (visual only) ─────────────────────────────────── */}
+          {/* ── Drag handle ───────────────────────────────────────────────── */}
           <View style={styles.dragHandle} />
 
           {/* ── Title ─────────────────────────────────────────────────────── */}
-          <Text style={styles.title}>{t('newCustomer')}</Text>
+          <Text style={styles.title}>{t("newCustomer")}</Text>
 
           {/* ── Name input ────────────────────────────────────────────────── */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t('nameRequired')}</Text>
+            <Text style={styles.label}>{t("nameRequired")}</Text>
             <TextInput
               ref={nameInputRef}
               style={[styles.input, nameError ? styles.inputError : null]}
-              value={name}                        // ← controlled: value from state
-              onChangeText={(text) => {           // ← controlled: state update on type
+              value={name}
+              onChangeText={(text) => {
                 setName(text);
-                if (nameError) setNameError("");  // clear error as user types
+                if (nameError) setNameError("");
               }}
-              placeholder={t('placeholderName')}
+              placeholder={t("placeholderName")}
               placeholderTextColor={colors.text.muted}
-              returnKeyType="next"                // shows "Next" on keyboard instead of "Return"
+              returnKeyType="next"
               maxLength={80}
+              editable={!saving}
             />
             {nameError ? (
               <Text style={styles.errorText}>{nameError}</Text>
@@ -179,17 +159,18 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
 
           {/* ── Phone input ───────────────────────────────────────────────── */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t('phoneOptional')}</Text>
+            <Text style={styles.label}>{t("phoneOptional")}</Text>
             <TextInput
               style={styles.input}
               value={phone}
               onChangeText={setPhone}
-              placeholder={t('placeholderPhone')}
+              placeholder={t("placeholderPhone")}
               placeholderTextColor={colors.text.muted}
-              keyboardType="phone-pad"           // numeric keyboard on mobile
+              keyboardType="phone-pad"
               returnKeyType="done"
-              onSubmitEditing={handleSave}       // pressing Done on keyboard = Save
+              onSubmitEditing={handleSave}
               maxLength={20}
+              editable={!saving}
             />
           </View>
 
@@ -204,13 +185,13 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
             ]}
           >
             <Text style={styles.saveButtonText}>
-              {saving ? t('saving') : t('saveCustomer')}
+              {saving ? t("saving") : t("saveCustomer")}
             </Text>
           </Pressable>
 
           {/* ── Cancel link ───────────────────────────────────────────────── */}
-          <Pressable onPress={handleClose} style={styles.cancelButton}>
-            <Text style={styles.cancelText}>{t('cancel')}</Text>
+          <Pressable onPress={handleClose} style={styles.cancelButton} disabled={saving}>
+            <Text style={styles.cancelText}>{t("cancel")}</Text>
           </Pressable>
 
         </View>
@@ -219,10 +200,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const makeStyles = (colors: Colors) => StyleSheet.create({
-  // ── Modal structure ────────────────────────────────────────────────────────
   backdrop: {
     position: "absolute",
     top: 0,
@@ -233,8 +211,6 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
   },
   kavWrapper: {
     flex: 1,
-    // This positions the sheet at the bottom of the screen.
-    // justifyContent: "flex-end" pushes children to the bottom.
     justifyContent: "flex-end",
   },
   sheet: {
@@ -244,11 +220,9 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     borderTopWidth: 1,
     borderColor: colors.background.tertiary,
     padding: 24,
-    paddingBottom: 40,   // extra space at bottom for home bar on iPhone
+    paddingBottom: 40,
     gap: 16,
   },
-
-  // ── Drag handle ──────────────────────────────────────────────────────────
   dragHandle: {
     width: 40,
     height: 4,
@@ -257,16 +231,12 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     alignSelf: "center",
     marginBottom: 8,
   },
-
-  // ── Header ───────────────────────────────────────────────────────────────
   title: {
     color: colors.text.primary,
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 4,
   },
-
-  // ── Form fields ───────────────────────────────────────────────────────────
   fieldGroup: {
     gap: 6,
   },
@@ -294,8 +264,6 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     color: colors.debt,
     fontSize: 13,
   },
-
-  // ── Buttons ───────────────────────────────────────────────────────────────
   saveButton: {
     backgroundColor: colors.accent.teal,
     borderRadius: 14,

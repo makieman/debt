@@ -21,6 +21,27 @@
  * the still-animating modal.
  * Solution: Call onClose() first, then delay onSuccess() by ~350 ms so the
  * modal is fully hidden before the parent re-renders.
+ *
+ * ─── FEATURE: IMPORT FROM CONTACTS ──────────────────────────────────────────
+ *
+ * A "Import from Contacts" button opens the native system contact picker via
+ * expo-contacts/legacy presentContactPickerAsync(). When a contact is chosen,
+ * the name and phone fields are auto-filled. The user can then review and save.
+ *
+ * REQUIRES: expo-contacts package + android.permission.READ_CONTACTS in app.json
+ * NOTE: Needs a development build — contact picker does not work in Expo Go.
+ *
+ * ─── ORIGINAL CONCEPTS ───────────────────────────────────────────────────────
+ *
+ * MODAL vs WEB DIALOG:
+ * In React Native, Modal renders in a SEPARATE NATIVE WINDOW LAYER above the
+ * app — not just z-index. The modal content is isolated from the app's view
+ * hierarchy.
+ *
+ * CONTROLLED INPUTS:
+ * React Native TextInput has no internal state. Always use:
+ *   value={stateName}
+ *   onChangeText={setStateName}
  */
 
 import React, { useState, useRef, useEffect } from "react";
@@ -34,7 +55,11 @@ import {
   Platform,
   StyleSheet,
   TouchableWithoutFeedback,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
+import * as Contacts from "expo-contacts/legacy";
+import { Ionicons } from "@expo/vector-icons";
 import { useThemeContext, Colors } from "../theme";
 import { useLanguage } from "../store/LanguageContext";
 import { addCustomer } from "../repositories/customers";
@@ -60,6 +85,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
   const [phone, setPhone] = useState("");
   const [nameError, setNameError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loadingContacts, setLoadingContacts] = useState(false);
 
   // ── Ref for auto-focus ────────────────────────────────────────────────────
   const nameInputRef = useRef<TextInput>(null);
@@ -76,11 +102,49 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
       setPhone("");
       setNameError("");
       setSaving(false);
+      setLoadingContacts(false);
     }
   }, [visible]);
 
   const handleClose = () => {
     onClose();
+  };
+
+  // ── Import from Contacts ──────────────────────────────────────────────────
+  const handleImportContact = async () => {
+    try {
+      setLoadingContacts(true);
+
+      if (Platform.OS === "android") {
+        const { status } = await Contacts.requestPermissionsAsync();
+        if (status !== "granted") {
+          setLoadingContacts(false);
+          Alert.alert("", t("contactPermissionDenied"));
+          return;
+        }
+      }
+
+      const contact = await Contacts.presentContactPickerAsync();
+
+      if (contact) {
+        if (contact.name) {
+          setName(contact.name);
+          if (nameError) setNameError("");
+        }
+
+        if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
+          const rawPhone = contact.phoneNumbers[0].number ?? "";
+          setPhone(rawPhone.replace(/[\s\-()]/g, ""));
+        }
+      }
+    } catch (err) {
+      console.warn("Contact picker error:", err);
+    } finally {
+      setLoadingContacts(false);
+      setTimeout(() => {
+        nameInputRef.current?.focus();
+      }, 300);
+    }
   };
 
   // ── Validation + save ────────────────────────────────────────────────────
@@ -99,10 +163,8 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
         phone: phone.trim() || undefined,
       });
 
-      // Close modal first — slide-out animation plays for ~300 ms
       onClose();
 
-      // Trigger parent refresh after animation completes to avoid a flash
       setTimeout(() => {
         onSuccess();
       }, 350);
@@ -135,6 +197,28 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
           {/* ── Title ─────────────────────────────────────────────────────── */}
           <Text style={styles.title}>{t("newCustomer")}</Text>
 
+          {/* ── Import from Contacts button ───────────────────────────────── */}
+          <Pressable
+            onPress={handleImportContact}
+            disabled={loadingContacts || saving}
+            style={({ pressed }) => [
+              styles.importButton,
+              pressed && styles.importButtonPressed,
+              (loadingContacts || saving) && styles.importButtonDisabled,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={t("importFromContacts")}
+          >
+            {loadingContacts ? (
+              <ActivityIndicator size="small" color={colors.accent.teal} />
+            ) : (
+              <Ionicons name="person-add-outline" size={18} color={colors.accent.teal} />
+            )}
+            <Text style={styles.importButtonText}>
+              {loadingContacts ? "..." : t("importFromContacts")}
+            </Text>
+          </Pressable>
+
           {/* ── Name input ────────────────────────────────────────────────── */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t("nameRequired")}</Text>
@@ -150,7 +234,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
               placeholderTextColor={colors.text.muted}
               returnKeyType="next"
               maxLength={80}
-              editable={!saving}
+              editable={!saving && !loadingContacts}
             />
             {nameError ? (
               <Text style={styles.errorText}>{nameError}</Text>
@@ -170,18 +254,18 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
               returnKeyType="done"
               onSubmitEditing={handleSave}
               maxLength={20}
-              editable={!saving}
+              editable={!saving && !loadingContacts}
             />
           </View>
 
           {/* ── Save button ───────────────────────────────────────────────── */}
           <Pressable
             onPress={handleSave}
-            disabled={saving}
+            disabled={saving || loadingContacts}
             style={({ pressed }) => [
               styles.saveButton,
               pressed && styles.saveButtonPressed,
-              saving && styles.saveButtonDisabled,
+              (saving || loadingContacts) && styles.saveButtonDisabled,
             ]}
           >
             <Text style={styles.saveButtonText}>
@@ -236,6 +320,30 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 4,
+  },
+  importButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.accent.teal + "60",
+    backgroundColor: colors.accent.teal + "10",
+  },
+  importButtonPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.98 }],
+  },
+  importButtonDisabled: {
+    opacity: 0.4,
+  },
+  importButtonText: {
+    color: colors.accent.teal,
+    fontSize: 14,
+    fontWeight: "600",
   },
   fieldGroup: {
     gap: 6,

@@ -28,7 +28,8 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.READ_CONTACTS"
       ]
     },
     "web": {
@@ -66,7 +67,13 @@
           }
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow Credi to access your contacts to add customers faster."
+        }
+      ]
     ],
     "extra": {
       "eas": {

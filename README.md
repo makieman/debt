@@ -21,7 +21,6 @@
 - [Contributing](#contributing)
 - [License](#license)
 
----
 
 ## Overview
 

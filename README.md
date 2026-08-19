@@ -38,7 +38,6 @@ The app answers three everyday business questions:
 | Category | Details |
 | 📊 **Dashboard** | Total receivables, amount collected, outstanding balance, recent activity feed |
 | 👥 **Customer Management** | Add / edit / soft-delete customers, full transaction history per customer |
-| 💸 **Credit Tracking** | Record debts and payments with a custom numpad, add notes |
 | 🗓 **Daily Entry** | Log cash sales, M-Pesa sales, credit issued, and itemized expenses (stock, rent, transport, salary, utilities, custom) |
 | 📈 **Sales Reports** | Weekly chart (Victory Native + Skia), top debtors, daily summary history |
 | 🔔 **Reminders** | Modal to view and act on overdue credit balances |

@@ -1,6 +1,6 @@
 # Credi — Shop Credit & Daily Sales Tracker
 
-> A mobile-first tool that helps shop owners track customer credit, record daily sales, and never lose money to forgotten debts.
+> A mobile app that helps shop owners track customer credit, record daily sales
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Expo SDK](https://img.shields.io/badge/Expo-SDK%2056-000020?logo=expo)](https://docs.expo.dev/versions/v56.0.0/)
@@ -21,7 +21,6 @@
 - [Contributing](#contributing)
 - [License](#license)
 
----
 
 ## Overview
 
@@ -42,8 +41,7 @@ The app answers three everyday business questions:
 | 📈 **Sales Reports** | Weekly chart (Victory Native + Skia), top debtors, daily summary history |
 | 🔔 **Reminders** | Modal to view and act on overdue credit balances |
 | 📤 **Export** | Export all data as **XLSX** or **JSON** via the native share sheet |
-| 📥 **Import** | Restore data from a JSON backup or Excel file |
-| ☁️ **Google Drive Backup** | Automatic backup to Drive's hidden `appDataFolder` on every export (OAuth 2.0 + PKCE — no client secret needed) |
+| 📥 **Import** | Restore data from a JSON backup or Excel file 
 | 🔒 **PIN & Biometric Lock** | App lock screen using `expo-local-authentication` and `expo-secure-store` |
 | 🌍 **Multilingual** | English (`en`) and Swahili (`sw`) |
 

@@ -160,8 +160,12 @@ export function CustomerListScreen() {
           accessibilityRole="button"
           accessibilityLabel={t('importFromContacts')}
         >
-          <Ionicons name="people-outline" size={18} color={colors.accent.teal} />
-          <Text style={styles.importHeaderBtnText}>{t('importFromContacts')}</Text>
+          <View style={styles.importHeaderBtnContent}>
+            <Ionicons name="person-add-outline" size={16} color={colors.accent.teal} />
+            <Text style={styles.importHeaderBtnText} numberOfLines={1}>
+              {t('importContactsShort')}
+            </Text>
+          </View>
         </Pressable>
       </View>
 
@@ -422,18 +426,21 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     letterSpacing: -0.5,
   },
   importHeaderBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
     borderRadius: 20,
     backgroundColor: colors.accent.tealDim,
     borderWidth: 1,
     borderColor: colors.accent.teal + "30",
+    overflow: "hidden",
   },
   importHeaderBtnPressed: {
     opacity: 0.75,
+  },
+  importHeaderBtnContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
   importHeaderBtnText: {
     fontSize: 13,

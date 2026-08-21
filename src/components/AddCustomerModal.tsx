@@ -65,6 +65,8 @@ import { useLanguage } from "../store/LanguageContext";
 import { addCustomer } from "../repositories/customers";
 import { db } from "../db";
 
+import { ImportContactsModal } from "./ImportContactsModal";
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface AddCustomerModalProps {
@@ -85,7 +87,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
   const [phone, setPhone] = useState("");
   const [nameError, setNameError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [importModalVisible, setImportModalVisible] = useState(false);
 
   // ── Ref for auto-focus ────────────────────────────────────────────────────
   const nameInputRef = useRef<TextInput>(null);
@@ -102,7 +104,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
       setPhone("");
       setNameError("");
       setSaving(false);
-      setLoadingContacts(false);
+      setImportModalVisible(false);
     }
   }, [visible]);
 
@@ -110,42 +112,11 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
     onClose();
   };
 
-  // ── Import from Contacts ──────────────────────────────────────────────────
-  const handleImportContact = async () => {
-    try {
-      setLoadingContacts(true);
-
-      if (Platform.OS === "android") {
-        const { status } = await Contacts.requestPermissionsAsync();
-        if (status !== "granted") {
-          setLoadingContacts(false);
-          Alert.alert("", t("contactPermissionDenied"));
-          return;
-        }
-      }
-
-      const contact = await Contacts.presentContactPickerAsync();
-
-      if (contact) {
-        if (contact.name) {
-          setName(contact.name);
-          if (nameError) setNameError("");
-        }
-
-        if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
-          const rawPhone = contact.phoneNumbers[0].number ?? "";
-          setPhone(rawPhone.replace(/[\s\-()]/g, ""));
-        }
-      }
-    } catch (err) {
-      console.warn("Contact picker error:", err);
-    } finally {
-      setLoadingContacts(false);
-      setTimeout(() => {
-        nameInputRef.current?.focus();
-      }, 300);
-    }
+  // ── Open Import Contacts Modal ────────────────────────────────────────────
+  const handleOpenImportModal = () => {
+    setImportModalVisible(true);
   };
+
 
   // ── Validation + save ────────────────────────────────────────────────────
   const handleSave = async () => {
@@ -199,23 +170,19 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
 
           {/* ── Import from Contacts button ───────────────────────────────── */}
           <Pressable
-            onPress={handleImportContact}
-            disabled={loadingContacts || saving}
+            onPress={handleOpenImportModal}
+            disabled={saving}
             style={({ pressed }) => [
               styles.importButton,
               pressed && styles.importButtonPressed,
-              (loadingContacts || saving) && styles.importButtonDisabled,
+              saving && styles.importButtonDisabled,
             ]}
             accessibilityRole="button"
             accessibilityLabel={t("importFromContacts")}
           >
-            {loadingContacts ? (
-              <ActivityIndicator size="small" color={colors.accent.teal} />
-            ) : (
-              <Ionicons name="person-add-outline" size={18} color={colors.accent.teal} />
-            )}
+            <Ionicons name="people-outline" size={18} color={colors.accent.teal} />
             <Text style={styles.importButtonText}>
-              {loadingContacts ? "..." : t("importFromContacts")}
+              {t("importFromContacts")}
             </Text>
           </Pressable>
 
@@ -234,7 +201,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
               placeholderTextColor={colors.text.muted}
               returnKeyType="next"
               maxLength={80}
-              editable={!saving && !loadingContacts}
+              editable={!saving}
             />
             {nameError ? (
               <Text style={styles.errorText}>{nameError}</Text>
@@ -254,18 +221,18 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
               returnKeyType="done"
               onSubmitEditing={handleSave}
               maxLength={20}
-              editable={!saving && !loadingContacts}
+              editable={!saving}
             />
           </View>
 
           {/* ── Save button ───────────────────────────────────────────────── */}
           <Pressable
             onPress={handleSave}
-            disabled={saving || loadingContacts}
+            disabled={saving}
             style={({ pressed }) => [
               styles.saveButton,
               pressed && styles.saveButtonPressed,
-              (saving || loadingContacts) && styles.saveButtonDisabled,
+              saving && styles.saveButtonDisabled,
             ]}
           >
             <Text style={styles.saveButtonText}>
@@ -280,6 +247,18 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
 
         </View>
       </KeyboardAvoidingView>
+
+      <ImportContactsModal
+        visible={importModalVisible}
+        onClose={() => setImportModalVisible(false)}
+        onSuccess={() => {
+          setImportModalVisible(false);
+          onClose();
+          setTimeout(() => {
+            onSuccess();
+          }, 350);
+        }}
+      />
     </Modal>
   );
 }

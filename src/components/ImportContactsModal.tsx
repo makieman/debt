@@ -263,46 +263,53 @@ export function ImportContactsModal({ visible, onClose, onSuccess }: ImportConta
         <Pressable
           onPress={() => toggleContact(item.id)}
           style={({ pressed }) => [
-            styles.contactRow,
+            styles.contactRowPressable,
             pressed && styles.contactRowPressed,
           ]}
         >
-          {/* Avatar */}
-          <View style={[styles.avatar, { backgroundColor: avatarBg }]}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
-
-          {/* Details */}
-          <View style={styles.contactMeta}>
-            <View style={styles.nameRow}>
-              <Text style={styles.contactName} numberOfLines={1}>
-                {item.name}
-              </Text>
-              {item.alreadyImported && (
-                <View style={styles.alreadyTag}>
-                  <Text style={styles.alreadyTagText}>{t("alreadyImported")}</Text>
-                </View>
-              )}
+          <View style={styles.contactRowContent}>
+            {/* Avatar */}
+            <View style={[styles.avatar, { backgroundColor: avatarBg }]}>
+              <Text style={styles.avatarText}>{initials}</Text>
             </View>
-            {item.phone ? (
-              <Text style={styles.contactPhone} numberOfLines={1}>
-                {item.phone}
-              </Text>
-            ) : null}
-          </View>
 
-          {/* Checkbox */}
-          <View style={styles.checkboxContainer}>
-            <Ionicons
-              name={isSelected ? "checkbox" : "square-outline"}
-              size={22}
-              color={isSelected ? colors.accent.teal : colors.text.muted}
-            />
+            {/* Details */}
+            <View style={styles.contactMeta}>
+              <View style={styles.nameRow}>
+                <Text style={styles.contactName} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                {item.alreadyImported && (
+                  <View style={styles.alreadyTag}>
+                    <Text style={styles.alreadyTagText}>{t("alreadyImported")}</Text>
+                  </View>
+                )}
+              </View>
+              {item.phone ? (
+                <Text style={styles.contactPhone} numberOfLines={1}>
+                  {item.phone}
+                </Text>
+              ) : null}
+            </View>
+
+            {/* Checkbox */}
+            <View style={styles.checkboxContainer}>
+              <Ionicons
+                name={isSelected ? "checkbox" : "square-outline"}
+                size={22}
+                color={isSelected ? colors.accent.teal : colors.text.muted}
+              />
+            </View>
           </View>
         </Pressable>
       );
     },
     [selectedIds, toggleContact, colors, styles, t]
+  );
+
+  const ItemSeparator = useCallback(
+    () => <View style={styles.itemSeparator} />,
+    [styles.itemSeparator]
   );
 
   return (
@@ -387,6 +394,7 @@ export function ImportContactsModal({ visible, onClose, onSuccess }: ImportConta
                 data={filteredContacts}
                 keyExtractor={(item) => item.id}
                 renderItem={renderContactItem}
+                ItemSeparatorComponent={ItemSeparator}
                 contentContainerStyle={[
                   styles.listContent,
                   { paddingBottom: insets.bottom + 90 },
@@ -524,24 +532,27 @@ const makeStyles = (colors: Colors) =>
     listContent: {
       paddingTop: 4,
     },
-    contactRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.background.tertiary,
+    contactRowPressable: {
+      width: "100%",
     },
     contactRowPressed: {
       backgroundColor: colors.background.secondary,
     },
+    contactRowContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      width: "100%",
+    },
     avatar: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       alignItems: "center",
       justifyContent: "center",
       marginRight: 12,
+      flexShrink: 0,
     },
     avatarText: {
       color: "#FFFFFF",
@@ -550,6 +561,7 @@ const makeStyles = (colors: Colors) =>
     },
     contactMeta: {
       flex: 1,
+      justifyContent: "center",
       marginRight: 8,
     },
     nameRow: {
@@ -580,7 +592,15 @@ const makeStyles = (colors: Colors) =>
       marginTop: 2,
     },
     checkboxContainer: {
+      flexShrink: 0,
       paddingLeft: 8,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    itemSeparator: {
+      height: 1,
+      backgroundColor: colors.background.tertiary,
+      marginLeft: 72,
     },
     bottomBar: {
       position: "absolute",

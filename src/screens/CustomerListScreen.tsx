@@ -29,6 +29,7 @@ import { CustomerCard } from "../components/CustomerCard";
 import { EmptyState } from "../components/EmptyState";
 import { AddCustomerModal } from "../components/AddCustomerModal";
 import { EditCustomerModal } from "../components/EditCustomerModal";
+import { ImportContactsModal } from "../components/ImportContactsModal";
 import { CustomerListNavProp } from "../navigation/types";
 import { CustomerWithBalance } from "../types";
 
@@ -45,6 +46,7 @@ export function CustomerListScreen() {
   // ── State ─────────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
+  const [importModalVisible, setImportModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerWithBalance | null>(null);
   const [filterMode, setFilterMode] = useState<'all' | 'owes' | 'settled'>('all');
@@ -149,6 +151,18 @@ export function CustomerListScreen() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <View style={styles.header}>
         <Text style={styles.title}>{t('customers')}</Text>
+        <Pressable
+          onPress={() => setImportModalVisible(true)}
+          style={({ pressed }) => [
+            styles.importHeaderBtn,
+            pressed && styles.importHeaderBtnPressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={t('importFromContacts')}
+        >
+          <Ionicons name="people-outline" size={18} color={colors.accent.teal} />
+          <Text style={styles.importHeaderBtnText}>{t('importFromContacts')}</Text>
+        </Pressable>
       </View>
 
       {/* ── Search & Filter Bar ─────────────────────────────────────────────── */}
@@ -325,6 +339,12 @@ export function CustomerListScreen() {
         onSuccess={handleModalSuccess}
       />
 
+      <ImportContactsModal
+        visible={importModalVisible}
+        onClose={() => setImportModalVisible(false)}
+        onSuccess={handleModalSuccess}
+      />
+
       {selectedCustomer && (
         <EditCustomerModal
           visible={editModalVisible}
@@ -391,12 +411,34 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   title: {
     color: colors.text.primary,
     fontSize: 28,
     fontWeight: "800",
     letterSpacing: -0.5,
+  },
+  importHeaderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: colors.accent.tealDim,
+    borderWidth: 1,
+    borderColor: colors.accent.teal + "30",
+  },
+  importHeaderBtnPressed: {
+    opacity: 0.75,
+  },
+  importHeaderBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.accent.teal,
   },
 
   // ── Search & Filter ────────────────────────────────────────────────────────

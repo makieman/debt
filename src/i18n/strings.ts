@@ -96,6 +96,7 @@ export const translations = {
 
     // Import from Contacts
     importFromContacts: 'Import from Contacts',
+    importContactsShort: 'Import Contacts',
     importAllContacts: 'Import All Contacts',
     importSelectedContacts: 'Import Contacts',
     selectAllContacts: 'Select All',
@@ -344,6 +345,7 @@ export const translations = {
 
     // Import from Contacts
     importFromContacts: 'Ingiza kutoka Anwani',
+    importContactsShort: 'Ingiza Anwani',
     importAllContacts: 'Ingiza Anwani Zote',
     importSelectedContacts: 'Ingiza Anwani',
     selectAllContacts: 'Chagua Zote',

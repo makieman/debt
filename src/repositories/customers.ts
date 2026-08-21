@@ -46,6 +46,39 @@ export async function addCustomer(
 }
 
 /**
+ * Inserts multiple new customers into the database in a single transaction.
+ *
+ * @param db           - The open SQLite database instance
+ * @param newCustomers - Array of customer objects to insert
+ * @returns            - The total number of customers successfully inserted
+ */
+export async function addCustomersBatch(
+  db: SQLiteDatabase,
+  newCustomers: NewCustomer[]
+): Promise<number> {
+  if (!newCustomers || newCustomers.length === 0) return 0;
+
+  let count = 0;
+  await db.withTransactionAsync(async () => {
+    const now = new Date().toISOString();
+    for (const customer of newCustomers) {
+      const name = customer.name?.trim();
+      if (!name) continue;
+
+      await db.runAsync(
+        `INSERT INTO customers (name, phone, createdAt)
+         VALUES (?, ?, ?)`,
+        [name, customer.phone?.trim() ?? null, now]
+      );
+      count++;
+    }
+  });
+
+  return count;
+}
+
+
+/**
  * Fetches all customers, sorted A→Z by name.
  *
  * `getAllAsync` executes a SELECT and returns all matching rows as an array.

@@ -96,6 +96,16 @@ export const translations = {
 
     // Import from Contacts
     importFromContacts: 'Import from Contacts',
+    importAllContacts: 'Import All Contacts',
+    importSelectedContacts: 'Import Contacts',
+    selectAllContacts: 'Select All',
+    deselectAllContacts: 'Deselect All',
+    searchContactsPlaceholder: 'Search contacts by name or phone...',
+    alreadyImported: 'Already added',
+    noContactsFound: 'No contacts found on this device.',
+    importSuccessMessage: 'Successfully imported contacts',
+    importingContacts: 'Importing contacts...',
+    selectedCount: 'Selected',
     contactPermissionDenied: 'Contact access denied. Please enable it in your device Settings.',
 
     // Add Transaction Modal
@@ -334,6 +344,16 @@ export const translations = {
 
     // Import from Contacts
     importFromContacts: 'Ingiza kutoka Anwani',
+    importAllContacts: 'Ingiza Anwani Zote',
+    importSelectedContacts: 'Ingiza Anwani',
+    selectAllContacts: 'Chagua Zote',
+    deselectAllContacts: 'Acha Zote',
+    searchContactsPlaceholder: 'Tafuta anwani kwa jina au namba...',
+    alreadyImported: 'Imeshawekwa',
+    noContactsFound: 'Hakuna anwani zilizopatikana kwenye simu.',
+    importSuccessMessage: 'Imefanikiwa kuingiza anwani',
+    importingContacts: 'Inaingiza anwani...',
+    selectedCount: 'Zilizochaguliwa',
     contactPermissionDenied: 'Ruhusa ya anwani imekataliwa. Tafadhali iwezesha kwenye Mipangilio ya kifaa chako.',
 
     // Add Transaction Modal

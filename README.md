@@ -26,7 +26,7 @@
 
 **Credi** is a React Native / Expo app built for duka (small shop) owners in Kenya and similar markets. It runs **fully offline** with a local SQLite database  no server required. Optional Google Drive integration provides automatic cloud backups.
 
-The app answers three everyday business questions:
+
 
 1. **How much money is owed to me?** — Customer credit dashboard
 2. **How did the shop perform today?** — Daily cash, M-Pesa, and expense logging

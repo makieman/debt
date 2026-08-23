@@ -1,4 +1,4 @@
-# Credi — Shop Credit & Daily Sales Tracker
+# Credi — Shop Credit & Daily Sales 
 
 > A mobile app that helps shop owners track customer credit, record daily sales
 

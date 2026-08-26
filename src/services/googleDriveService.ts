@@ -106,9 +106,17 @@ export interface DriveUploadResult {
  */
 export async function connectGoogleDrive(): Promise<boolean> {
   try {
-    // Construct redirect URI using Expo auth proxy (https://auth.expo.io/@avatarmano/duka-deni)
+    // Construct redirect URI using the reverse client ID scheme.
+    // This is the correct approach for Android OAuth clients — Google sends the
+    // auth code back to the app via this URI scheme after the user signs in.
+    // The scheme is the Client ID reversed: com.googleusercontent.apps.<client_id>
+    // It must match one of the schemes registered in app.json and the Android
+    // client ID configured in Google Cloud Console.
+    // NOTE: This does NOT work in Expo Go (which uses exp:// scheme). It only
+    // works in production APK builds or expo-dev-client native builds.
     const redirectUri = AuthSession.makeRedirectUri({
-      native: 'https://auth.expo.io/@avatarmano/duka-deni',
+      scheme: 'com.googleusercontent.apps.104870381302-p5p3k8kjcnusuulpid6h7q27uhtpvrfp',
+      path: 'oauth2redirect',
     });
 
     // Create the auth request with PKCE

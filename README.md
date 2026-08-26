@@ -102,6 +102,8 @@ credi/
 │   ├── types/            # Shared TypeScript types
 │   └── utils/            # Money formatting, date helpers, etc.
 ├── assets/               # Icons and splash screen images
+├── docs/                 # Project reference guides
+│   └── google-oauth-apk-guide.md  # OAuth error history & APK build checklist
 ├── App.tsx               # Root component
 ├── app.json              # Expo config
 ├── eas.json              # EAS build profiles
@@ -148,7 +150,7 @@ npm start
 
 Google Drive backup is **optional**. All other features work without it.
 
-To enable automatic Drive backups, register an OAuth 2.0 Android client in Google Cloud:
+To enable automatic Drive backups you need an **Android-type** OAuth 2.0 client in Google Cloud. Using a Web client or the Expo Auth Proxy will work in Expo Go dev but **fail in production APKs** — see [`docs/google-oauth-apk-guide.md`](./docs/google-oauth-apk-guide.md) for the full explanation.
 
 ### Step-by-step
 
@@ -156,15 +158,23 @@ To enable automatic Drive backups, register an OAuth 2.0 Android client in Googl
 2. **Enable the Google Drive API** — *APIs & Services → Library → Google Drive API → Enable*.
 3. **Create OAuth credentials**:
    - *Credentials → Create credentials → OAuth client ID*
-   - Application type: **Android**
+   - Application type: **Android** ← must be Android, not Web
    - Package name: `com.lightstorm.credi`
    - SHA-1 fingerprint — obtain from your EAS keystore:
      ```bash
      eas credentials
+     # Select: Android → production → copy the SHA1 Fingerprint
      ```
 4. **Paste the Client ID** into `src/services/googleDriveService.ts`:
    ```ts
    const GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+   ```
+5. **Register the reverse-client-ID URI scheme** in `app.json` (already done ✅):
+   ```json
+   "scheme": [
+     "com.lightstorm.credi",
+     "com.googleusercontent.apps.YOUR_CLIENT_ID"
+   ]
    ```
 
 ### How the OAuth flow works
@@ -172,14 +182,19 @@ To enable automatic Drive backups, register an OAuth 2.0 Android client in Googl
 ```
 App ──── openAuthSessionAsync ────▶ Google Sign-In (browser popup)
                                             │
-                                user approves → auth_code returned
+                                user approves → auth_code returned via
+                                reverse-client-ID URI scheme (on-device)
                                             │
 App ──── POST /token (code + PKCE verifier) ────▶ Google
                                             │
                                 access_token saved to SecureStore
 ```
 
-The app uses **PKCE** (Proof Key for Code Exchange, RFC 7636) which removes the need for a client secret on public (mobile) clients. Uploaded files go to Drive's hidden [`appDataFolder`](https://developers.google.com/drive/api/guides/appdata) — not visible to users in "My Drive" and not counted against their storage quota.
+The app uses **PKCE** (Proof Key for Code Exchange, RFC 7636) — no client secret needed on mobile. The redirect uses the **reverse client ID URI scheme** (`com.googleusercontent.apps.<id>://oauth2redirect`) which Android intercepts directly — no third-party proxy server in the loop.
+
+Uploaded files go to Drive's hidden [`appDataFolder`](https://developers.google.com/drive/api/guides/appdata) — not visible to users in "My Drive" and not counted against their storage quota.
+
+> ⚠️ **Cannot test in Expo Go.** The Android OAuth client requires your app's package name and SHA-1, which Expo Go's shell app does not satisfy. Test this feature using a `preview` APK build.
 
 ---
 
@@ -190,7 +205,7 @@ The project uses **EAS Build** with three profiles defined in [`eas.json`](./eas
 | Profile | Output | Use Case |
 |---|---|---|
 | `development` | `.apk` (internal) | Local development with dev client |
-| `preview` | `.apk` (internal) | Stakeholder / QA testing |
+| `preview` | `.apk` (internal) | Stakeholder / QA testing — **use this to verify OAuth before shipping** |
 | `production` | `.aab` (app bundle) | Google Play Store submission |
 
 ```bash
@@ -206,6 +221,10 @@ eas build --profile preview --platform android
 # Build a production AAB for the Play Store
 eas build --profile production --platform android
 ```
+
+> ℹ️ Both `preview` and `production` use the same EAS-managed keystore (same SHA-1), so testing Google Drive OAuth in a `preview` APK fully validates that it will work in `production`.
+
+> 📖 If the Google Drive OAuth flow fails after building, refer to [`docs/google-oauth-apk-guide.md`](./docs/google-oauth-apk-guide.md) for a full debugging checklist.
 
 ---
 
@@ -320,4 +339,4 @@ Contributions are welcome! Please follow these steps:
 
 ## License
 
-MIT © Lightstorm — see [LICENSE](./LICENSE) for full text.
+MIT © W WORKS — see [LICENSE](./LICENSE) for full text.

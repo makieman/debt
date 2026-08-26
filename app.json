@@ -19,7 +19,7 @@
         "backgroundColor": "#0F1117"
       },
       "package": "com.lightstorm.credi",
-      "versionCode": 1,
+      "versionCode": 2,
       "permissions": [
         "USE_BIOMETRIC",
         "USE_FINGERPRINT",
@@ -60,7 +60,7 @@
         "expo-build-properties",
         {
           "android": {
-            "enableProguardInReleaseBuilds": false,
+            "enableProguardInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
             "enableMinifyInReleaseBuilds": true,
             "extraProguardRules": "-keep class expo.modules.** { *; }\n-keep class com.shopify.reactnative.skia.** { *; }\n-keep class com.swmansion.reanimated.** { *; }\n-keep class com.margelo.worklets.** { *; }\n-keepclassmembers class * { native <methods>; }"

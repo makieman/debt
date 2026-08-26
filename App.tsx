@@ -94,9 +94,11 @@ const FIRST_LAUNCH_KEY = "hasLaunched_v1";
 
 // ─── AppErrorBoundary ─────────────────────────────────────────────────────────
 //
-// TEMPORARY: Catches JS errors that would otherwise cause a silent crash.
-// Renders the error message on screen so we can diagnose the crash cause.
-// Remove before final production release.
+// Catches JS errors that would otherwise cause a silent crash.
+// Shows a user-friendly recovery screen. Error details are logged via
+// console.error (stripped in production by transform-remove-console).
+// When a crash reporting service (e.g. Sentry) is integrated, add the
+// reporting call inside componentDidCatch.
 
 interface ErrorBoundaryState {
   error: Error | null;
@@ -113,6 +115,8 @@ class AppErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
+    // Logged in dev, stripped in production by transform-remove-console.
+    // TODO: Send to crash reporting service (Sentry, Bugsnag, etc.)
     console.error('[AppErrorBoundary] Caught error:', error.message);
     console.error('[AppErrorBoundary] Stack:', error.stack);
     console.error('[AppErrorBoundary] Component stack:', info.componentStack);
@@ -128,15 +132,30 @@ class AppErrorBoundary extends React.Component<
           justifyContent: 'center',
           padding: 32,
         }}>
-          <Text style={{ color: '#ff4444', fontSize: 18, fontWeight: '700', marginBottom: 12 }}>
-            ⚠️ App Startup Error
+          <Text style={{ color: '#EF4444', fontSize: 40, marginBottom: 16 }}>
+            😔
           </Text>
-          <Text style={{ color: '#ff8888', fontSize: 13, textAlign: 'center', marginBottom: 8 }}>
-            {this.state.error.message}
+          <Text style={{ color: '#F9FAFB', fontSize: 20, fontWeight: '700', marginBottom: 8, textAlign: 'center' }}>
+            Something went wrong
           </Text>
-          <Text style={{ color: '#666', fontSize: 11, textAlign: 'center', fontFamily: 'monospace' }}>
-            {this.state.error.stack?.split('\n').slice(0, 5).join('\n')}
+          <Text style={{ color: '#9CA3AF', fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 24 }}>
+            Credi ran into an unexpected error.{"\n"}Please restart the app to continue.
           </Text>
+          <Pressable
+            onPress={() => this.setState({ error: null })}
+            style={{
+              backgroundColor: '#1F2937',
+              paddingHorizontal: 28,
+              paddingVertical: 14,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: '#10B981',
+            }}
+          >
+            <Text style={{ color: '#10B981', fontWeight: '600', fontSize: 15 }}>
+              Try Again
+            </Text>
+          </Pressable>
         </View>
       );
     }
@@ -219,7 +238,7 @@ export default function App() {
     return (
       <SafeAreaProvider>
         <View style={styles.centeredScreen}>
-          <StatusBar style="dark" />
+          <StatusBar style="light" />
           <ActivityIndicator size="large" color={colors.accent.teal} />
           <Text style={styles.loadingLabel}>Starting Credi...</Text>
         </View>
@@ -232,7 +251,7 @@ export default function App() {
     return (
       <SafeAreaProvider>
         <View style={styles.centeredScreen}>
-          <StatusBar style="dark" />
+          <StatusBar style="light" />
           <Text style={styles.errorTitle}>⚠️ Startup Error</Text>
           <Text style={styles.errorMessage}>
             The app failed to start. Please restart.{"\n"}
@@ -270,7 +289,7 @@ export default function App() {
           <LanguageProvider>
             <ThemeProvider>
               <SafeAreaProvider>
-                <StatusBar style="dark" />
+                <StatusBar style="light" />
                 <NavigationContainer>
                   <AppGate />
                 </NavigationContainer>

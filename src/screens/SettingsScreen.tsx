@@ -634,7 +634,7 @@ export function SettingsScreen() {
           <View style={[styles.divider, { marginLeft: 16 }]} />
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Built by</Text>
-            <Text style={styles.rowValue}>Lightstorm</Text>
+            <Text style={styles.rowValue}>W WORKS</Text>
           </View>
         </View>
 

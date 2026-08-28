@@ -18,6 +18,7 @@
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#0F1117"
       },
+      "softwareKeyboardLayoutMode": "adjustResize",
       "package": "com.lightstorm.credi",
       "versionCode": 2,
       "permissions": [

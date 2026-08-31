@@ -219,32 +219,30 @@ export function TransactionScreen() {
         <Pressable
           style={({ pressed }) => [
             styles.actionButton,
+            styles.debtButton,
             pressed && styles.actionButtonPressed,
           ]}
           onPress={() => setShowDebtModal(true)}
           accessibilityLabel={t('addDebt')}
           accessibilityRole="button"
         >
-          <View style={[styles.actionIconCircle, { borderColor: colors.debt }]}>
-            <Ionicons name="add" size={24} color={colors.debt} />
-          </View>
-          <Text style={styles.actionLabel}>{t('addDebt')}</Text>
+          <Text style={[styles.actionIcon, { color: colors.debt }]}>-</Text>
+          <Text style={[styles.actionLabel, { color: colors.debt }]}>{t('addDebt')}</Text>
         </Pressable>
 
         {/* Record Payment button */}
         <Pressable
           style={({ pressed }) => [
             styles.actionButton,
+            styles.paymentButton,
             pressed && styles.actionButtonPressed,
           ]}
           onPress={() => setShowPaymentModal(true)}
           accessibilityLabel={t('recordPayment')}
           accessibilityRole="button"
         >
-          <View style={[styles.actionIconCircle, { borderColor: colors.payment }]}>
-            <Ionicons name="cash-outline" size={20} color={colors.payment} />
-          </View>
-          <Text style={styles.actionLabel}>{t('recordPayment')}</Text>
+          <Text style={[styles.actionIcon, { color: colors.payment }]}>+</Text>
+          <Text style={[styles.actionLabel, { color: colors.payment }]}>{t('recordPayment')}</Text>
         </Pressable>
       </View>
 
@@ -487,31 +485,32 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    flexDirection: 'column',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    borderRadius: 16,
-    backgroundColor: colors.background.secondary,
-    borderWidth: 1,
-    borderColor: colors.background.tertiary,
-    gap: 8,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    gap: 6,
+  },
+  debtButton: {
+    backgroundColor: `${colors.debt}18`,
+    borderColor: colors.debt,
+  },
+  paymentButton: {
+    backgroundColor: colors.accent.tealDim,
+    borderColor: colors.payment,
   },
   actionButtonPressed: {
     opacity: 0.7,
   },
-  actionIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
+  actionIcon: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   actionLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text.secondary,
+    fontSize: 15,
+    fontWeight: '600',
   },
 
   // Section label

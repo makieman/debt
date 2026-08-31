@@ -51,10 +51,12 @@ import {
   TextInput,
   Pressable,
   KeyboardAvoidingView,
+  ScrollView,
   Platform,
   StyleSheet,
   TouchableWithoutFeedback,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useThemeContext, Colors } from "../theme";
@@ -86,6 +88,29 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
   const [saving, setSaving] = useState(false);
   const [importModalVisible, setImportModalVisible] = useState(false);
 
+  // ── Track keyboard height for Android Modal workaround ─────────────────
+  // React Native <Modal> on Android creates a separate Dialog window that
+  // ignores MainActivity's adjustResize. We listen for keyboard events and
+  // manually add paddingBottom so the ScrollView content area grows,
+  // letting the user scroll to lower fields above the keyboard.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   // ── Ref for auto-focus ────────────────────────────────────────────────────
   const nameInputRef = useRef<TextInput>(null);
   const phoneInputRef = useRef<TextInput>(null);
@@ -114,7 +139,6 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
   const handleOpenImportModal = () => {
     setImportModalVisible(true);
   };
-
 
   // ── Validation + save ────────────────────────────────────────────────────
   const handleSave = async () => {
@@ -151,6 +175,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
       visible={visible}
       transparent
       animationType="slide"
+      statusBarTranslucent
       onRequestClose={handleClose}
     >
       <TouchableWithoutFeedback onPress={handleClose}>
@@ -162,164 +187,168 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
         style={styles.kavWrapper}
       >
         <View style={styles.sheet}>
-
-          {/* ── Drag handle ───────────────────────────────────────────────── */}
-          <View style={styles.dragHandle} />
-
-          {/* ── Header row (title + close X) ──────────────────────────────── */}
-          <View style={styles.headerRow}>
-            <View>
-              <Text style={styles.title}>{t("newCustomer")}</Text>
-              <Text style={styles.subtitle}>Fill in the details below</Text>
-            </View>
-            <Pressable
-              onPress={handleClose}
-              style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.6 }]}
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-            >
-              <Ionicons name="close" size={20} color={colors.text.secondary} />
-            </Pressable>
-          </View>
-
-          {/* ── Divider ───────────────────────────────────────────────────── */}
-          <View style={styles.divider} />
-
-          {/* ── Import from Contacts — card style ─────────────────────────── */}
-          <Pressable
-            onPress={handleOpenImportModal}
-            disabled={saving}
-            style={({ pressed }) => [
-              styles.importButton,
-              pressed && styles.importButtonPressed,
-              saving && styles.importButtonDisabled,
+          <ScrollView
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.scrollContent,
+              keyboardHeight > 0 && { paddingBottom: keyboardHeight },
             ]}
-            accessibilityRole="button"
-            accessibilityLabel={t("importFromContacts")}
           >
-            <View style={styles.importIconWrap}>
-              <Ionicons name="people" size={22} color={colors.accent.teal} />
-            </View>
-            <View style={styles.importTextBlock}>
-              <Text style={styles.importButtonTitle}>{t("importFromContacts")}</Text>
-              <Text style={styles.importButtonSub}>Pick one or more from your phone book</Text>
-            </View>
-          </Pressable>
 
-          {/* ── OR divider ────────────────────────────────────────────────── */}
-          <View style={styles.orRow}>
-            <View style={styles.orLine} />
-            <Text style={styles.orText}>OR ADD MANUALLY</Text>
-            <View style={styles.orLine} />
-          </View>
+            {/* ── Drag handle ───────────────────────────────────────────────── */}
+            <View style={styles.dragHandle} />
 
-          {/* ── Name input ────────────────────────────────────────────────── */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t("nameRequired")}</Text>
-            <View style={[styles.inputWrap, nameError ? styles.inputWrapError : null]}>
-              <Ionicons
-                name="person-outline"
-                size={18}
-                color={nameError ? colors.debt : colors.text.muted}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                ref={nameInputRef}
-                style={styles.input}
-                value={name}
-                onChangeText={(text) => {
-                  setName(text);
-                  if (nameError) setNameError("");
-                }}
-                placeholder={t("placeholderName")}
-                placeholderTextColor={colors.text.muted}
-                returnKeyType="next"
-                onSubmitEditing={() => phoneInputRef.current?.focus()}
-                maxLength={80}
-                editable={!saving}
-              />
-              {name.length > 0 && !saving && (
-                <Pressable onPress={() => setName("")} style={styles.clearBtn}>
-                  <Ionicons name="close-circle" size={16} color={colors.text.muted} />
-                </Pressable>
-              )}
-            </View>
-            {nameError ? (
-              <View style={styles.errorRow}>
-                <Ionicons name="alert-circle-outline" size={14} color={colors.debt} />
-                <Text style={styles.errorText}>{nameError}</Text>
+            {/* ── Header row (title + close X) ──────────────────────────────── */}
+            <View style={styles.headerRow}>
+              <View>
+                <Text style={styles.title}>{t("newCustomer")}</Text>
+                <Text style={styles.subtitle}>Fill in the details below</Text>
               </View>
-            ) : null}
-          </View>
-
-          {/* ── Phone input ───────────────────────────────────────────────── */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t("phoneOptional")}</Text>
-            <View style={styles.inputWrap}>
-              <Ionicons
-                name="call-outline"
-                size={18}
-                color={colors.text.muted}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                ref={phoneInputRef}
-                style={styles.input}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder={t("placeholderPhone")}
-                placeholderTextColor={colors.text.muted}
-                keyboardType="phone-pad"
-                returnKeyType="done"
-                onSubmitEditing={handleSave}
-                maxLength={20}
-                editable={!saving}
-              />
-              {phone.length > 0 && !saving && (
-                <Pressable onPress={() => setPhone("")} style={styles.clearBtn}>
-                  <Ionicons name="close-circle" size={16} color={colors.text.muted} />
-                </Pressable>
-              )}
+              <Pressable
+                onPress={handleClose}
+                style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.6 }]}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+              >
+                <Ionicons name="close" size={20} color={colors.text.secondary} />
+              </Pressable>
             </View>
-          </View>
 
-          {/* ── Cancel + Save row ─────────────────────────────────────────── */}
-          <View style={styles.actionRow}>
+            {/* ── Divider ───────────────────────────────────────────────────── */}
+            <View style={styles.divider} />
+
+            {/* ── Import from Contacts — card style ─────────────────────────── */}
             <Pressable
-              onPress={handleClose}
-              style={({ pressed }) => [styles.cancelButton, pressed && { opacity: 0.6 }]}
+              onPress={handleOpenImportModal}
               disabled={saving}
-            >
-              <Text style={styles.cancelText}>{t("cancel")}</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={handleSave}
-              disabled={!canSave}
               style={({ pressed }) => [
-                styles.saveButton,
-                !canSave && styles.saveButtonDisabled,
-                pressed && canSave && styles.saveButtonPressed,
+                styles.importButton,
+                pressed && styles.importButtonPressed,
+                saving && styles.importButtonDisabled,
               ]}
               accessibilityRole="button"
-              accessibilityLabel={t("saveCustomer")}
+              accessibilityLabel={t("importFromContacts")}
             >
-              {saving ? (
-                <>
+              <View style={styles.importIconWrap}>
+                <Ionicons name="people" size={22} color={colors.accent.teal} />
+              </View>
+              <View style={styles.importTextBlock}>
+                <Text style={styles.importButtonTitle}>{t("importFromContacts")}</Text>
+                <Text style={styles.importButtonSub}>Pick one or more from your phone book</Text>
+              </View>
+            </Pressable>
+
+            {/* ── OR divider ────────────────────────────────────────────────── */}
+            <View style={styles.orRow}>
+              <View style={styles.orLine} />
+              <Text style={styles.orText}>OR ADD MANUALLY</Text>
+              <View style={styles.orLine} />
+            </View>
+
+            {/* ── Name input ────────────────────────────────────────────────── */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>{t("nameRequired")}</Text>
+              <View style={[styles.inputWrap, nameError ? styles.inputWrapError : null]}>
+                <Ionicons
+                  name="person-outline"
+                  size={18}
+                  color={nameError ? colors.debt : colors.text.muted}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  ref={nameInputRef}
+                  style={styles.input}
+                  value={name}
+                  onChangeText={(text) => {
+                    setName(text);
+                    if (nameError) setNameError("");
+                  }}
+                  placeholder={t("placeholderName")}
+                  placeholderTextColor={colors.text.muted}
+                  returnKeyType="next"
+                  onSubmitEditing={() => phoneInputRef.current?.focus()}
+                  maxLength={80}
+                  editable={!saving}
+                />
+                {name.length > 0 && !saving && (
+                  <Pressable onPress={() => setName("")} style={styles.clearBtn}>
+                    <Ionicons name="close-circle" size={16} color={colors.text.muted} />
+                  </Pressable>
+                )}
+              </View>
+              {nameError ? (
+                <View style={styles.errorRow}>
+                  <Ionicons name="alert-circle-outline" size={14} color={colors.debt} />
+                  <Text style={styles.errorText}>{nameError}</Text>
+                </View>
+              ) : null}
+            </View>
+
+            {/* ── Phone input ───────────────────────────────────────────────── */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>{t("phoneOptional")}</Text>
+              <View style={styles.inputWrap}>
+                <Ionicons
+                  name="call-outline"
+                  size={18}
+                  color={colors.text.muted}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  ref={phoneInputRef}
+                  style={styles.input}
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder={t("placeholderPhone")}
+                  placeholderTextColor={colors.text.muted}
+                  keyboardType="phone-pad"
+                  returnKeyType="done"
+                  onSubmitEditing={handleSave}
+                  maxLength={20}
+                  editable={!saving}
+                />
+                {phone.length > 0 && !saving && (
+                  <Pressable onPress={() => setPhone("")} style={styles.clearBtn}>
+                    <Ionicons name="close-circle" size={16} color={colors.text.muted} />
+                  </Pressable>
+                )}
+              </View>
+            </View>
+
+            {/* ── Cancel + Save row ─────────────────────────────────────────── */}
+            <View style={styles.actionRow}>
+              <Pressable
+                onPress={handleClose}
+                style={({ pressed }) => [styles.cancelButton, pressed && { opacity: 0.6 }]}
+                disabled={saving}
+              >
+                <Text style={styles.cancelText}>{t("cancel")}</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleSave}
+                disabled={!canSave}
+                style={({ pressed }) => [
+                  styles.saveButton,
+                  !canSave && styles.saveButtonDisabled,
+                  pressed && canSave && styles.saveButtonPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={t("saveCustomer")}
+              >
+                {saving ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
-                  <Text style={styles.saveButtonText}>{t("saving")}</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="checkmark-circle" size={20} color={canSave ? "#FFFFFF" : colors.text.muted} />
+                ) : (
                   <Text style={[styles.saveButtonText, !canSave && styles.saveButtonTextDisabled]}>
                     {t("saveCustomer")}
                   </Text>
-                </>
-              )}
-            </Pressable>
-          </View>
+                )}
+              </Pressable>
+            </View>
 
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
 
@@ -357,6 +386,9 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     borderTopRightRadius: 28,
     borderTopWidth: 1,
     borderColor: colors.background.tertiary,
+    maxHeight: "85%",
+  },
+  scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: 40,
@@ -414,8 +446,8 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: colors.accent.teal + "50",
-    backgroundColor: colors.accent.teal + "0D",
+    borderColor: colors.accent.teal + "80",
+    backgroundColor: colors.accent.teal + "18",
   },
   importButtonPressed: {
     opacity: 0.75,
@@ -428,7 +460,7 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: colors.accent.teal + "20",
+    backgroundColor: colors.accent.teal + "25",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -528,7 +560,7 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 17,
+    paddingVertical: 14,
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: colors.background.tertiary,
@@ -546,15 +578,14 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
     backgroundColor: colors.accent.teal,
     borderRadius: 16,
-    paddingVertical: 18,
+    paddingVertical: 14,
     shadowColor: colors.accent.teal,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 4,
   },
   saveButtonPressed: {
     opacity: 0.85,

@@ -24,9 +24,8 @@
  *
  * ─── FEATURE: IMPORT FROM CONTACTS ──────────────────────────────────────────
  *
- * A "Import from Contacts" button opens the native system contact picker via
- * expo-contacts/legacy presentContactPickerAsync(). When a contact is chosen,
- * the name and phone fields are auto-filled. The user can then review and save.
+ * A "Import from Contacts" button opens the ImportContactsModal (multi-select).
+ * When contacts are imported, the modal closes and the parent list refreshes.
  *
  * REQUIRES: expo-contacts package + android.permission.READ_CONTACTS in app.json
  * NOTE: Needs a development build — contact picker does not work in Expo Go.
@@ -55,10 +54,8 @@ import {
   Platform,
   StyleSheet,
   TouchableWithoutFeedback,
-  Alert,
   ActivityIndicator,
 } from "react-native";
-import * as Contacts from "expo-contacts/legacy";
 import { Ionicons } from "@expo/vector-icons";
 import { useThemeContext, Colors } from "../theme";
 import { useLanguage } from "../store/LanguageContext";
@@ -91,6 +88,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
 
   // ── Ref for auto-focus ────────────────────────────────────────────────────
   const nameInputRef = useRef<TextInput>(null);
+  const phoneInputRef = useRef<TextInput>(null);
 
   // ── Auto-focus when modal becomes visible ─────────────────────────────────
   useEffect(() => {
@@ -124,6 +122,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
 
     if (!trimmedName) {
       setNameError(t("enterCustomerNameError"));
+      nameInputRef.current?.focus();
       return;
     }
 
@@ -145,6 +144,8 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
     }
   };
 
+  const canSave = name.trim().length > 0 && !saving;
+
   return (
     <Modal
       visible={visible}
@@ -165,10 +166,26 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
           {/* ── Drag handle ───────────────────────────────────────────────── */}
           <View style={styles.dragHandle} />
 
-          {/* ── Title ─────────────────────────────────────────────────────── */}
-          <Text style={styles.title}>{t("newCustomer")}</Text>
+          {/* ── Header row (title + close X) ──────────────────────────────── */}
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.title}>{t("newCustomer")}</Text>
+              <Text style={styles.subtitle}>Fill in the details below</Text>
+            </View>
+            <Pressable
+              onPress={handleClose}
+              style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.6 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
+              <Ionicons name="close" size={20} color={colors.text.secondary} />
+            </Pressable>
+          </View>
 
-          {/* ── Import from Contacts button ───────────────────────────────── */}
+          {/* ── Divider ───────────────────────────────────────────────────── */}
+          <View style={styles.divider} />
+
+          {/* ── Import from Contacts — card style ─────────────────────────── */}
           <Pressable
             onPress={handleOpenImportModal}
             disabled={saving}
@@ -180,70 +197,128 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
             accessibilityRole="button"
             accessibilityLabel={t("importFromContacts")}
           >
-            <Ionicons name="people-outline" size={18} color={colors.accent.teal} />
-            <Text style={styles.importButtonText}>
-              {t("importFromContacts")}
-            </Text>
+            <View style={styles.importIconWrap}>
+              <Ionicons name="people" size={22} color={colors.accent.teal} />
+            </View>
+            <View style={styles.importTextBlock}>
+              <Text style={styles.importButtonTitle}>{t("importFromContacts")}</Text>
+              <Text style={styles.importButtonSub}>Pick one or more from your phone book</Text>
+            </View>
           </Pressable>
+
+          {/* ── OR divider ────────────────────────────────────────────────── */}
+          <View style={styles.orRow}>
+            <View style={styles.orLine} />
+            <Text style={styles.orText}>OR ADD MANUALLY</Text>
+            <View style={styles.orLine} />
+          </View>
 
           {/* ── Name input ────────────────────────────────────────────────── */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t("nameRequired")}</Text>
-            <TextInput
-              ref={nameInputRef}
-              style={[styles.input, nameError ? styles.inputError : null]}
-              value={name}
-              onChangeText={(text) => {
-                setName(text);
-                if (nameError) setNameError("");
-              }}
-              placeholder={t("placeholderName")}
-              placeholderTextColor={colors.text.muted}
-              returnKeyType="next"
-              maxLength={80}
-              editable={!saving}
-            />
+            <View style={[styles.inputWrap, nameError ? styles.inputWrapError : null]}>
+              <Ionicons
+                name="person-outline"
+                size={18}
+                color={nameError ? colors.debt : colors.text.muted}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                ref={nameInputRef}
+                style={styles.input}
+                value={name}
+                onChangeText={(text) => {
+                  setName(text);
+                  if (nameError) setNameError("");
+                }}
+                placeholder={t("placeholderName")}
+                placeholderTextColor={colors.text.muted}
+                returnKeyType="next"
+                onSubmitEditing={() => phoneInputRef.current?.focus()}
+                maxLength={80}
+                editable={!saving}
+              />
+              {name.length > 0 && !saving && (
+                <Pressable onPress={() => setName("")} style={styles.clearBtn}>
+                  <Ionicons name="close-circle" size={16} color={colors.text.muted} />
+                </Pressable>
+              )}
+            </View>
             {nameError ? (
-              <Text style={styles.errorText}>{nameError}</Text>
+              <View style={styles.errorRow}>
+                <Ionicons name="alert-circle-outline" size={14} color={colors.debt} />
+                <Text style={styles.errorText}>{nameError}</Text>
+              </View>
             ) : null}
           </View>
 
           {/* ── Phone input ───────────────────────────────────────────────── */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>{t("phoneOptional")}</Text>
-            <TextInput
-              style={styles.input}
-              value={phone}
-              onChangeText={setPhone}
-              placeholder={t("placeholderPhone")}
-              placeholderTextColor={colors.text.muted}
-              keyboardType="phone-pad"
-              returnKeyType="done"
-              onSubmitEditing={handleSave}
-              maxLength={20}
-              editable={!saving}
-            />
+            <View style={styles.inputWrap}>
+              <Ionicons
+                name="call-outline"
+                size={18}
+                color={colors.text.muted}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                ref={phoneInputRef}
+                style={styles.input}
+                value={phone}
+                onChangeText={setPhone}
+                placeholder={t("placeholderPhone")}
+                placeholderTextColor={colors.text.muted}
+                keyboardType="phone-pad"
+                returnKeyType="done"
+                onSubmitEditing={handleSave}
+                maxLength={20}
+                editable={!saving}
+              />
+              {phone.length > 0 && !saving && (
+                <Pressable onPress={() => setPhone("")} style={styles.clearBtn}>
+                  <Ionicons name="close-circle" size={16} color={colors.text.muted} />
+                </Pressable>
+              )}
+            </View>
           </View>
 
-          {/* ── Save button ───────────────────────────────────────────────── */}
-          <Pressable
-            onPress={handleSave}
-            disabled={saving}
-            style={({ pressed }) => [
-              styles.saveButton,
-              pressed && styles.saveButtonPressed,
-              saving && styles.saveButtonDisabled,
-            ]}
-          >
-            <Text style={styles.saveButtonText}>
-              {saving ? t("saving") : t("saveCustomer")}
-            </Text>
-          </Pressable>
+          {/* ── Cancel + Save row ─────────────────────────────────────────── */}
+          <View style={styles.actionRow}>
+            <Pressable
+              onPress={handleClose}
+              style={({ pressed }) => [styles.cancelButton, pressed && { opacity: 0.6 }]}
+              disabled={saving}
+            >
+              <Text style={styles.cancelText}>{t("cancel")}</Text>
+            </Pressable>
 
-          {/* ── Cancel link ───────────────────────────────────────────────── */}
-          <Pressable onPress={handleClose} style={styles.cancelButton} disabled={saving}>
-            <Text style={styles.cancelText}>{t("cancel")}</Text>
-          </Pressable>
+            <Pressable
+              onPress={handleSave}
+              disabled={!canSave}
+              style={({ pressed }) => [
+                styles.saveButton,
+                !canSave && styles.saveButtonDisabled,
+                pressed && canSave && styles.saveButtonPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={t("saveCustomer")}
+            >
+              {saving ? (
+                <>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text style={styles.saveButtonText}>{t("saving")}</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color={canSave ? "#FFFFFF" : colors.text.muted} />
+                  <Text style={[styles.saveButtonText, !canSave && styles.saveButtonTextDisabled]}>
+                    {t("saveCustomer")}
+                  </Text>
+                </>
+              )}
+            </Pressable>
+          </View>
 
         </View>
       </KeyboardAvoidingView>
@@ -270,7 +345,7 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
   },
   kavWrapper: {
     flex: 1,
@@ -278,104 +353,225 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
   },
   sheet: {
     backgroundColor: colors.background.secondary,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     borderTopWidth: 1,
     borderColor: colors.background.tertiary,
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
     paddingBottom: 40,
-    gap: 16,
+    gap: 14,
   },
+
+  // ── Drag handle ────────────────────────────────────────────────────────────
   dragHandle: {
     width: 40,
     height: 4,
     backgroundColor: colors.background.tertiary,
     borderRadius: 2,
     alignSelf: "center",
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+
+  // ── Header ─────────────────────────────────────────────────────────────────
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
   },
   title: {
     color: colors.text.primary,
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 4,
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: -0.3,
   },
+  subtitle: {
+    color: colors.text.muted,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.background.tertiary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: colors.background.tertiary,
+    marginVertical: 2,
+  },
+
+  // ── Import button ──────────────────────────────────────────────────────────
   importButton: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
+    gap: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: colors.accent.teal + "60",
-    backgroundColor: colors.accent.teal + "10",
+    borderColor: colors.accent.teal + "50",
+    backgroundColor: colors.accent.teal + "0D",
   },
   importButtonPressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.98 }],
+    opacity: 0.75,
+    transform: [{ scale: 0.985 }],
   },
   importButtonDisabled: {
-    opacity: 0.4,
+    opacity: 0.35,
   },
-  importButtonText: {
+  importIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.accent.teal + "20",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  importTextBlock: {
+    flex: 1,
+  },
+  importButtonTitle: {
     color: colors.accent.teal,
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
   },
+  importButtonSub: {
+    color: colors.text.muted,
+    fontSize: 12,
+    marginTop: 1,
+  },
+
+  // ── OR divider ─────────────────────────────────────────────────────────────
+  orRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.background.tertiary,
+  },
+  orText: {
+    color: colors.text.muted,
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.8,
+  },
+
+  // ── Form fields ────────────────────────────────────────────────────────────
   fieldGroup: {
     gap: 6,
   },
   label: {
     color: colors.text.secondary,
-    fontSize: 13,
-    fontWeight: "500",
+    fontSize: 12,
+    fontWeight: "700",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
+    paddingLeft: 2,
+  },
+  inputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.background.primary,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.background.tertiary,
+    paddingHorizontal: 14,
+  },
+  inputWrapError: {
+    borderColor: colors.debt,
+    backgroundColor: colors.debt + "08",
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    backgroundColor: colors.background.primary,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.background.tertiary,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    flex: 1,
     color: colors.text.primary,
     fontSize: 16,
+    paddingVertical: 14,
   },
-  inputError: {
-    borderColor: colors.debt,
+  clearBtn: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  errorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+    paddingLeft: 2,
   },
   errorText: {
     color: colors.debt,
     fontSize: 13,
+    fontWeight: "500",
   },
-  saveButton: {
-    backgroundColor: colors.accent.teal,
-    borderRadius: 14,
-    paddingVertical: 16,
+
+  // ── Action row (Cancel + Save side by side) ──────────────────────────────
+  actionRow: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 12,
     marginTop: 4,
   },
-  saveButtonPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
-  saveButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: "700",
-  },
+
+  // ── Cancel ─────────────────────────────────────────────────────────────────
   cancelButton: {
+    flex: 1,
     alignItems: "center",
-    paddingVertical: 8,
+    justifyContent: "center",
+    paddingVertical: 17,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.background.tertiary,
+    backgroundColor: colors.background.primary,
   },
   cancelText: {
     color: colors.text.secondary,
     fontSize: 15,
+    fontWeight: "600",
+  },
+
+  // ── Save button ────────────────────────────────────────────────────────────
+  saveButton: {
+    flex: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: colors.accent.teal,
+    borderRadius: 16,
+    paddingVertical: 18,
+    shadowColor: colors.accent.teal,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  saveButtonPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.97 }],
+  },
+  saveButtonDisabled: {
+    backgroundColor: colors.background.tertiary,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  saveButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+  saveButtonTextDisabled: {
+    color: colors.text.muted,
   },
 });

@@ -222,8 +222,8 @@ export const AddTransactionModal = React.memo(function AddTransactionModal({
             onChangeText={setNote}
             maxLength={100}
             returnKeyType="done"
-            // Don't show the system keyboard when note is focused
-            // on the same screen as the numpad — it would scroll the view
+          // Don't show the system keyboard when note is focused
+          // on the same screen as the numpad — it would scroll the view
           />
 
           {/* Confirm button */}
@@ -239,7 +239,7 @@ export const AddTransactionModal = React.memo(function AddTransactionModal({
             accessibilityState={{ disabled: !isValid }}
           >
             {saving ? (
-              <ActivityIndicator color={colors.background.primary} />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.confirmButtonLabel}>{buttonLabel}</Text>
             )}
@@ -314,7 +314,7 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
   confirmButtonLabel: {
     fontSize: 17,
     fontWeight: '700',
-    color: colors.background.primary,
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
 });

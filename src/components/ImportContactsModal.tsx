@@ -335,7 +335,7 @@ export function ImportContactsModal({ visible, onClose, onSuccess }: ImportConta
             <Text style={styles.loadingText}>{t("importingContacts")}</Text>
           </View>
         ) : (
-          <>
+          <View style={{ flex: 1 }}>
             {/* Search input */}
             <View style={styles.searchRow}>
               <View style={styles.searchContainer}>
@@ -395,9 +395,10 @@ export function ImportContactsModal({ visible, onClose, onSuccess }: ImportConta
                 keyExtractor={(item) => item.id}
                 renderItem={renderContactItem}
                 ItemSeparatorComponent={ItemSeparator}
+                style={{ flex: 1 }}
                 contentContainerStyle={[
                   styles.listContent,
-                  { paddingBottom: insets.bottom + 90 },
+                  { paddingBottom: 16 },
                 ]}
                 showsVerticalScrollIndicator={false}
                 initialNumToRender={20}
@@ -426,15 +427,24 @@ export function ImportContactsModal({ visible, onClose, onSuccess }: ImportConta
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <>
-                    <Ionicons name="download-outline" size={20} color="#FFFFFF" />
-                    <Text style={styles.importButtonText}>
+                    <Ionicons
+                      name="download-outline"
+                      size={20}
+                      color={selectedIds.size === 0 ? colors.text.muted : "#FFFFFF"}
+                    />
+                    <Text
+                      style={[
+                        styles.importButtonText,
+                        selectedIds.size === 0 && styles.importButtonDisabledText,
+                      ]}
+                    >
                       {t("importSelectedContacts")} ({selectedIds.size})
                     </Text>
                   </>
                 )}
               </Pressable>
             </View>
-          </>
+          </View>
         )}
       </View>
     </Modal>
@@ -603,16 +613,16 @@ const makeStyles = (colors: Colors) =>
       marginLeft: 72,
     },
     bottomBar: {
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: colors.background.primary,
+      backgroundColor: "#FF0000",
       paddingHorizontal: 16,
       paddingTop: 12,
-      borderTopWidth: 1,
-      borderTopColor: colors.background.tertiary,
+      borderTopWidth: 3,
+      borderTopColor: "#FF0000",
       elevation: 10,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: -3 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
     },
     importButton: {
       flexDirection: "row",
@@ -628,11 +638,15 @@ const makeStyles = (colors: Colors) =>
       transform: [{ scale: 0.98 }],
     },
     importButtonDisabled: {
-      opacity: 0.5,
+      backgroundColor: colors.background.tertiary,
+      opacity: 0.8,
     },
     importButtonText: {
       color: "#FFFFFF",
       fontSize: 16,
       fontWeight: "700",
+    },
+    importButtonDisabledText: {
+      color: colors.text.muted,
     },
   });

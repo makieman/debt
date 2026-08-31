@@ -427,9 +427,9 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
   },
   importHeaderBtn: {
     borderRadius: 20,
-    backgroundColor: colors.accent.tealDim,
-    borderWidth: 1,
-    borderColor: colors.accent.teal + "30",
+    backgroundColor: colors.accent.teal + "1A",
+    borderWidth: 1.5,
+    borderColor: colors.accent.teal + "80",
     overflow: "hidden",
   },
   importHeaderBtnPressed: {
@@ -444,7 +444,7 @@ const makeStyles = (colors: Colors) => StyleSheet.create({
   },
   importHeaderBtnText: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
     color: colors.accent.teal,
   },
 

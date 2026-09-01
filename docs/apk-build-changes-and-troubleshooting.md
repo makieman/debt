@@ -78,13 +78,25 @@ In a **standalone Android APK build**, React Native's `<Modal>` component create
 
 ---
 
-## 3. Recommended Production-Ready Solution & Code Implementation
+## 3. Production Fix for Android Modal Keyboard Overlap & Numpad Redesign
 
-To ensure keyboard handling works flawlessly in both Expo Go and compiled Android APK builds, follow this production pattern:
+### 🛠️ Solution Architecture for Modal Keyboard Handling
 
-### Strategy 1: Standard React Native `<Modal>` + `ScrollView` Pattern (Used in Duka Deni)
+To guarantee that bottom sheet modals slide up cleanly above the soft keyboard in standalone APKs:
 
-Wrap modal form content in a `KeyboardAvoidingView` with platform-specific behavior (`iOS: 'padding'`, `Android: undefined`) and an inner `ScrollView` with `keyboardShouldPersistTaps="handled"`.
+1. **`statusBarTranslucent` on `<Modal>`**:
+   Enables the native Android Dialog window to accurately measure system status bar and navigation bar insets.
+
+2. **`Keyboard.addListener('keyboardDidShow')` Height Tracking**:
+   Since `KeyboardAvoidingView` with `behavior="height"` fails in separate Dialog windows, we manually listen to system `keyboardDidShow` / `keyboardDidHide` events and dynamically append `paddingBottom: keyboardHeight` to the sheet's `ScrollView`.
+
+3. **Auto-Scroll to Focused Inputs**:
+   Trigger `scrollViewRef.current?.scrollToEnd({ animated: true })` on keyboard reveal so input fields and confirm buttons automatically elevate above the keyboard.
+
+4. **Fintech Numpad UI Redesign**:
+   - Replaced bulky phone-dialer circles with lightweight, flat `88×52` rounded keys.
+   - Removed legacy telephone sub-labels (`ABC`, `DEF`, `GHI`).
+   - Added subtle press-scale micro-animations (`transform: [{ scale: 0.95 }]`) with zero layout reflow.
 
 ```tsx
 import React from 'react';

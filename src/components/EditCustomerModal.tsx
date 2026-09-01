@@ -12,9 +12,11 @@ import {
   TextInput,
   Pressable,
   KeyboardAvoidingView,
+  ScrollView,
   Platform,
   StyleSheet,
   TouchableWithoutFeedback,
+  Keyboard,
   Alert,
 } from "react-native";
 import { useThemeContext, Colors } from "../theme";
@@ -46,6 +48,25 @@ export function EditCustomerModal({
   const [saving, setSaving] = useState(false);
 
   const nameInputRef = useRef<TextInput>(null);
+
+  // ── Keyboard height tracking (Android Modal workaround) ─────────────────
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Sync state when customer changes or modal opens
   useEffect(() => {
@@ -114,6 +135,7 @@ export function EditCustomerModal({
       visible={visible}
       transparent
       animationType="slide"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
       <TouchableWithoutFeedback onPress={onClose}>
@@ -121,85 +143,95 @@ export function EditCustomerModal({
       </TouchableWithoutFeedback>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.kavWrapper}
       >
         <View style={styles.sheet}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.sheetTitle}>{t('editCustomer')}</Text>
-            <Pressable onPress={onClose} style={styles.closeBtn}>
-              <Text style={styles.closeBtnText}>✕</Text>
-            </Pressable>
-          </View>
-
-          {/* Form */}
-          <View style={styles.form}>
-            {/* Name Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>{t('nameRequired')}</Text>
-              <TextInput
-                ref={nameInputRef}
-                style={[styles.input, nameError ? styles.inputError : null]}
-                value={name}
-                onChangeText={(text) => {
-                  setName(text);
-                  if (nameError) setNameError("");
-                }}
-                placeholder={t('placeholderName')}
-                placeholderTextColor={colors.text.muted}
-                maxLength={40}
-                editable={!saving}
-              />
-              {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
-            </View>
-
-            {/* Phone Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>{t('phoneOptional')}</Text>
-              <TextInput
-                style={styles.input}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder={t('placeholderPhone')}
-                placeholderTextColor={colors.text.muted}
-                keyboardType="phone-pad"
-                maxLength={20}
-                editable={!saving}
-              />
-            </View>
-
-            {/* Action Buttons */}
-            <View style={styles.buttonContainer}>
-              <Pressable
-                onPress={handleSave}
-                disabled={saving}
-                style={({ pressed }) => [
-                  styles.saveBtn,
-                  pressed && styles.btnPressed,
-                  saving && styles.btnDisabled,
-                ]}
-              >
-                <Text style={styles.saveBtnText}>
-                  {saving ? t('saving') : t('save')}
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={handleDelete}
-                disabled={saving}
-                style={({ pressed }) => [
-                  styles.deleteBtn,
-                  pressed && styles.btnPressed,
-                  saving && styles.btnDisabled,
-                ]}
-              >
-                <Text style={styles.deleteBtnText}>
-                  {t('deleteCustomer')}
-                </Text>
+          <ScrollView
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.scrollContent,
+              keyboardHeight > 0 && { paddingBottom: keyboardHeight },
+            ]}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.sheetTitle}>{t('editCustomer')}</Text>
+              <Pressable onPress={onClose} style={styles.closeBtn}>
+                <Text style={styles.closeBtnText}>✕</Text>
               </Pressable>
             </View>
-          </View>
+
+            {/* Form */}
+            <View style={styles.form}>
+              {/* Name Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>{t('nameRequired')}</Text>
+                <TextInput
+                  ref={nameInputRef}
+                  style={[styles.input, nameError ? styles.inputError : null]}
+                  value={name}
+                  onChangeText={(text) => {
+                    setName(text);
+                    if (nameError) setNameError("");
+                  }}
+                  placeholder={t('placeholderName')}
+                  placeholderTextColor={colors.text.muted}
+                  maxLength={40}
+                  editable={!saving}
+                />
+                {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
+              </View>
+
+              {/* Phone Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>{t('phoneOptional')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder={t('placeholderPhone')}
+                  placeholderTextColor={colors.text.muted}
+                  keyboardType="phone-pad"
+                  maxLength={20}
+                  editable={!saving}
+                />
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.buttonContainer}>
+                <Pressable
+                  onPress={handleSave}
+                  disabled={saving}
+                  style={({ pressed }) => [
+                    styles.saveBtn,
+                    pressed && styles.btnPressed,
+                    saving && styles.btnDisabled,
+                  ]}
+                >
+                  <Text style={styles.saveBtnText}>
+                    {saving ? t('saving') : t('save')}
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={handleDelete}
+                  disabled={saving}
+                  style={({ pressed }) => [
+                    styles.deleteBtn,
+                    pressed && styles.btnPressed,
+                    saving && styles.btnDisabled,
+                  ]}
+                >
+                  <Text style={styles.deleteBtnText}>
+                    {t('deleteCustomer')}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -223,11 +255,14 @@ const makeStyles = (colors: Colors) =>
       backgroundColor: colors.background.primary,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
+      maxHeight: '85%',
+      borderWidth: 1,
+      borderColor: colors.background.tertiary,
+    },
+    scrollContent: {
       paddingHorizontal: 20,
       paddingTop: 20,
       paddingBottom: Platform.OS === "ios" ? 40 : 24,
-      borderWidth: 1,
-      borderColor: colors.background.tertiary,
     },
     header: {
       flexDirection: "row",

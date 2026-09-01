@@ -18,6 +18,9 @@
  * stable prop. NumpadKey receives a pre-built styles object and never calls
  * makeStyles or useThemeContext itself. Combined with the ThemeContext.Provider
  * useMemo fix, the keys are completely skipped by React on every keypress.
+ *
+ * ACCESSIBILITY & PRESS FEEDBACK:
+ * Keys feature scale micro-animations and accessibility labels for screen readers.
  */
 
 import React, { useCallback, useRef, useMemo } from 'react';

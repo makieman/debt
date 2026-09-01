@@ -94,12 +94,16 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
   // manually add paddingBottom so the ScrollView content area grows,
   // letting the user scroll to lower fields above the keyboard.
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (Platform.OS !== "android") return;
 
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
       setKeyboardHeight(e.endCoordinates.height);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     });
     const hideSub = Keyboard.addListener("keyboardDidHide", () => {
       setKeyboardHeight(0);
@@ -188,6 +192,7 @@ export function AddCustomerModal({ visible, onClose, onSuccess }: AddCustomerMod
       >
         <View style={styles.sheet}>
           <ScrollView
+            ref={scrollViewRef}
             bounces={false}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}

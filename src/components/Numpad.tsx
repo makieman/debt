@@ -1,7 +1,11 @@
 /**
  * src/components/Numpad.tsx
  *
- * Professional circular phone-dialer style numpad for Duka Deni.
+ * Clean, modern fintech-style numpad for Credi.
+ *
+ * Design: Flat rounded-rectangle keys with no borders, subtle background,
+ * and smooth press feedback. Inspired by Cash App / M-Pesa numpads.
+ * No phone-dialer sub-labels — this is a payment amount entry, not a dialer.
  *
  * PERFORMANCE NOTE — why styles live in Numpad, not NumpadKey:
  *
@@ -38,20 +42,6 @@ const KEYS: string[][] = [
   ['7', '8', '9'],
   ['.', '0', '⌫'],
 ];
-
-const KEY_SUB_LABELS: Record<string, string> = {
-  '1': '',
-  '2': 'ABC',
-  '3': 'DEF',
-  '4': 'GHI',
-  '5': 'JKL',
-  '6': 'MNO',
-  '7': 'PQRS',
-  '8': 'TUV',
-  '9': 'WXYZ',
-  '.': '',
-  '0': '+',
-};
 
 export function Numpad({ value, onChange, maxLength = 7 }: NumpadProps) {
   const { colors, isDark } = useThemeContext();
@@ -107,9 +97,9 @@ export function Numpad({ value, onChange, maxLength = 7 }: NumpadProps) {
             <NumpadKey
               key={key}
               label={key}
-              subLabel={KEY_SUB_LABELS[key]}
               onPress={handleKeyPress}
               isBackspace={key === '⌫'}
+              isDot={key === '.'}
               styles={styles}
               isDark={isDark}
               primaryColor={colors.text.primary}
@@ -128,9 +118,9 @@ type NumpadStyles = ReturnType<typeof makeStyles>;
 
 interface NumpadKeyProps {
   label: string;
-  subLabel?: string;
   onPress: (key: string) => void;
   isBackspace: boolean;
+  isDot: boolean;
   // Styles computed once by parent — avoids 12× StyleSheet.create per keypress
   styles: NumpadStyles;
   isDark: boolean;
@@ -141,9 +131,9 @@ interface NumpadKeyProps {
 const NumpadKey = React.memo(
   function NumpadKey({
     label,
-    subLabel,
     onPress,
     isBackspace,
+    isDot,
     styles,
     isDark,
     primaryColor,
@@ -161,36 +151,30 @@ const NumpadKey = React.memo(
         onPressIn={() => setIsPressed(true)}
         onPressOut={() => setIsPressed(false)}
         style={[
-          styles.keyCircle,
-          isBackspace && styles.actionKeyCircle,
-          label === '.' && styles.actionKeyCircle,
+          styles.key,
+          (isBackspace || isDot) && styles.actionKey,
           isPressed && styles.keyPressed,
         ]}
         accessibilityLabel={isBackspace ? 'backspace' : label}
         accessibilityRole="button"
       >
         {isBackspace ? (
-          <Ionicons name="backspace-outline" size={26} color={primaryColor} />
+          <Ionicons name="backspace-outline" size={24} color={mutedColor} />
         ) : (
-          <View style={styles.keyTextCol}>
-            <Text style={[styles.keyLabel, label === '.' && styles.dotLabel]}>
-              {label}
-            </Text>
-            {Boolean(subLabel) && (
-              <Text style={styles.subLabel}>{subLabel}</Text>
-            )}
-          </View>
+          <Text style={[styles.keyLabel, isDot && styles.dotLabel]}>
+            {label}
+          </Text>
         )}
       </Pressable>
     );
   },
   // Custom comparator: keys never need to re-render during typing because
-  // their label/subLabel/isBackspace are constants, and styles/colors only
+  // their label/isBackspace are constants, and styles/colors only
   // change when the theme switches — which is rare.
   (prev, next) =>
     prev.label === next.label &&
-    prev.subLabel === next.subLabel &&
     prev.isBackspace === next.isBackspace &&
+    prev.isDot === next.isDot &&
     prev.styles === next.styles &&
     prev.isDark === next.isDark &&
     prev.primaryColor === next.primaryColor &&
@@ -204,58 +188,43 @@ const makeStyles = (colors: Colors, isDark: boolean) =>
   StyleSheet.create({
     container: {
       width: '100%',
-      maxWidth: 320,
+      maxWidth: 340,
       alignSelf: 'center',
-      paddingVertical: 10,
+      paddingVertical: 4,
     },
     row: {
       flexDirection: 'row',
-      justifyContent: 'space-around',
+      justifyContent: 'space-evenly',
       alignItems: 'center',
-      marginBottom: 14,
+      marginBottom: 10,
     },
-    keyCircle: {
-      width: 74,
-      height: 74,
-      borderRadius: 37,
-      backgroundColor: isDark ? '#2D3748' : '#F1F5F9',
+    key: {
+      width: 88,
+      height: 52,
+      borderRadius: 14,
+      backgroundColor: isDark
+        ? 'rgba(255, 255, 255, 0.06)'
+        : 'rgba(0, 0, 0, 0.04)',
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 1.5,
-      borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.12)',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.25,
-      shadowRadius: 5,
-      elevation: 4,
     },
-    actionKeyCircle: {
-      backgroundColor: isDark ? '#1F2733' : '#E2E8F0',
+    actionKey: {
+      backgroundColor: 'transparent',
     },
     keyPressed: {
-      backgroundColor: isDark ? '#4A5568' : '#CBD5E1',
-      transform: [{ scale: 0.93 }],
-    },
-    keyTextCol: {
-      alignItems: 'center',
-      justifyContent: 'center',
+      backgroundColor: isDark
+        ? 'rgba(255, 255, 255, 0.15)'
+        : 'rgba(0, 0, 0, 0.10)',
+      transform: [{ scale: 0.95 }],
     },
     keyLabel: {
-      fontSize: 32,
-      fontWeight: '700',
-      color: isDark ? '#FFFFFF' : '#000000',
-      lineHeight: 34,
-    },
-    dotLabel: {
-      fontSize: 30,
-      fontWeight: '800',
+      fontSize: 26,
+      fontWeight: '500',
+      color: colors.text.primary,
       lineHeight: 30,
     },
-    subLabel: {
-      fontSize: 9,
+    dotLabel: {
+      fontSize: 28,
       fontWeight: '700',
-      color: colors.text.muted,
-      letterSpacing: 1.2,
-      marginTop: -2,
     },
   });

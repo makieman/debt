@@ -26,6 +26,10 @@
  * statusBarTranslucent on Modal and auto-scroll, the note input
  * and confirm button stay visible above the keyboard.
  *
+ * SUBMIT & FOCUS MANAGEMENT:
+ * The note TextInput automatically dismisses the keyboard via onSubmitEditing
+ * to keep the record transaction button clearly in view.
+ *
  * WHY IS THE BUTTON DISABLED AT ZERO?
  * A zero-amount transaction is data pollution. It writes a ghost row to
  * the database (type='debt', amount=0) that appears in the history list

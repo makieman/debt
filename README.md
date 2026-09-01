@@ -26,6 +26,10 @@
 
 **Credi** is a React Native / Expo app built for duka (small shop) owners in Kenya and similar markets. It runs **fully offline** with a local SQLite database  no server required. Optional Google Drive integration provides automatic cloud backups.
 
+### 🌟 Recent Release Highlights (Sep 2026)
+- **Android Modal Window Keyboard Fix**: Added `statusBarTranslucent`, `Keyboard.addListener` height tracking, and `ScrollView` auto-scroll so bottom sheet modals resize properly above the soft keyboard in compiled APKs.
+- **Fintech Numpad UI Refresh**: Modernized entry keypad with flat rounded surfaces, tactile micro-animations, and clean layout.
+
 
 
 1. **How much money is owed to me?** — Customer credit dashboard
@@ -136,11 +140,6 @@ npm install
 # 3. Start the Metro bundler
 npm start
 # or equivalently: expo start
-
-# 4. Open on a device / emulator
-#    Press 'a' in the terminal to open on a connected Android device or emulator.
-#    Press 'w' to open the web preview in a browser.
-```
 
 > **First launch:** The app automatically runs SQLite migrations on startup and creates an empty database. No manual database setup is required.
 

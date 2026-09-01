@@ -160,6 +160,7 @@ const NumpadKey = React.memo(
         ]}
         accessibilityLabel={isBackspace ? 'backspace' : label}
         accessibilityRole="button"
+        accessibilityState={{ selected: isPressed }}
       >
         {isBackspace ? (
           <Ionicons name="backspace-outline" size={24} color={mutedColor} />

@@ -67,7 +67,9 @@ import {
   ActivityIndicator,
   StyleSheet,
   Pressable,
+  Platform,
 } from "react-native";
+import * as NavigationBar from "expo-navigation-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
@@ -203,6 +205,16 @@ export default function App() {
   const [bootState, setBootState] = useState<BootState>("pending");
   const [bootError, setBootError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+
+  // ── Configure Android system navigation bar appearance ────────────────────────
+  // With edge-to-edge enabled the nav bar is transparent. Set button icons to
+  // 'light' so they contrast against the dark app background.
+  // Note: expo-navigation-bar is a native module — unavailable in Expo Go.
+  useEffect(() => {
+    if (Platform.OS === "android" && NavigationBar.setButtonStyleAsync) {
+      NavigationBar.setButtonStyleAsync("light").catch(() => {});
+    }
+  }, []);
 
   // ── Bootstrap: migrations + first-launch seed ────────────────────────────────
   useEffect(() => {

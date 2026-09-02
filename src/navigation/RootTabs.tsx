@@ -48,6 +48,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootTabParamList } from './types';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
@@ -61,19 +62,24 @@ const Tab = createBottomTabNavigator<RootTabParamList>();
 export default function RootTabs() {
   const { colors } = useThemeContext();
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       screenOptions={{
         // Hide the top header — our screens manage their own headers
         headerShown: false,
 
-        // ── Tab bar light theme ────────────────────────────────────────────
+        // ── Tab bar styling ────────────────────────────────────────────────
+        // In edge-to-edge mode the app draws behind the Android system
+        // navigation bar. We expand the tab bar by insets.bottom so its
+        // icons and labels never sit behind the system Back / Home / Recent
+        // buttons.
         tabBarStyle: {
           backgroundColor: colors.background.primary,
           borderTopColor: colors.background.tertiary,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          height: 60 + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
         },
 
         // Active tab (selected): emerald green accent

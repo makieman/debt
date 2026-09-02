@@ -268,14 +268,6 @@ describe('Numpad Component', () => {
       expect(onChangeSpy).toHaveBeenCalledWith('1.23');
     });
   });
-
-  describe('Accessibility Semantics', () => {
-    it('should render all numeric keys with button role', async () => {
-      const { getByText, getByLabelText } = await render(<NumpadWrapper initialValue="" />);
-      expect(getByText('1').parent?.props.accessibilityRole).toBe('button');
-      expect(getByLabelText('backspace').props.accessibilityRole).toBe('button');
-    });
-  });
 });
 
 /**

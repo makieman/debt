@@ -211,8 +211,8 @@ export default function App() {
   // 'light' so they contrast against the dark app background.
   // Note: expo-navigation-bar is a native module — unavailable in Expo Go.
   useEffect(() => {
-    if (Platform.OS === "android" && NavigationBar.setButtonStyleAsync) {
-      NavigationBar.setButtonStyleAsync("light").catch(() => {});
+    if (Platform.OS === "android" && NavigationBar.setStyle) {
+      NavigationBar.setStyle("dark");
     }
   }, []);
 

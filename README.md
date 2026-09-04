@@ -47,7 +47,7 @@
 | 📤 **Export** | Export all data as **XLSX** or **JSON** via the native share sheet |
 | 📥 **Import** | Restore data from a JSON backup or Excel file 
 | 🔒 **PIN & Biometric Lock** | App lock screen using `expo-local-authentication` and `expo-secure-store` |
-| 🌍 **Multilingual** | English (`en`) and Swahili (`sw`) |
+| 🌍 **Multilingual** | English and Swahili  |
 
 ---
 

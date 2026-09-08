@@ -3,7 +3,7 @@
 > A mobile app that helps shop owners track customer credit, record daily sales
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Expo SDK](https://img.shields.io/badge/Expo-SDK%2056-000020?logo=expo)](https://docs.expo.dev/versions/v56.0.0/)
+[![Expo SDK](https://img.shields.io/badge/Expo-SDK%2056-000020?logo=expo)
 [![React Native](https://img.shields.io/badge/React%20Native-0.85-61DAFB?logo=react)](https://reactnative.dev/)
 [![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android)](https://play.google.com/store)
 ## Table of Contents

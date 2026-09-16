@@ -104,7 +104,7 @@ credi/
 │   ├── store/            # Global state contexts and secure store helpers
 │   ├── theme/            # Colors, typography, theme context
 │   ├── types/            # Shared TypeScript types
-│   └── utils/            # Money formatting, date helpers, etc.
+│   └── utils/            # Money formatting, date helpers, etc
 ├── assets/               # Icons and splash screen images
 ├── docs/                 # Project reference guides
 │   └── google-oauth-apk-guide.md  # OAuth error history & APK build checklist

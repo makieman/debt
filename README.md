@@ -27,7 +27,7 @@
 **Credi** is a React Native / Expo app built for duka (small shop) owners in Kenya and similar markets. It runs **fully offline** with a local SQLite database  no server required. Optional Google Drive integration provides automatic cloud backups.
 
 ### 🌟 Recent Release Highlights (Sep 2026)
-- **Android Modal Window Keyboard Fix**: Added `statusBarTranslucent`, `Keyboard.addListener` height tracking, and `ScrollView` auto-scroll so bottom sheet modals resize properly above the soft keyboard in compiled APKs.
+- **Android Modal Window Keyboard Fix**: Added `statusBarTranslucent` `Keyboard.addListener` height tracking, and `ScrollView` auto-scroll so bottom sheet modals resize properly above the soft keyboard in compiled APKs.
 - **Fintech Numpad UI Refresh**: Modernized entry keypad with flat rounded surfaces, tactile micro-animations, and clean layout.
 
 

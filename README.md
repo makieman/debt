@@ -75,7 +75,7 @@
 ## Project Structure
 credi/
 ├── src/
-│   ├── components/       # Reusable UI components 
+│   ├── components/       # Reusable UI component
 │   │   ├── pin/          # PIN entry components
 │   │   ├── sales/        # Sales-specific components
 │   │   └── settings/     # Settings-specific components (ExportSheet…)

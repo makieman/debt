@@ -65,7 +65,7 @@
 | **Secure Storage** | [expo-secure-store](https://docs.expo.dev/versions/v56.0.0/sdk/securestore/) |
 | **Biometrics** | [expo-local-authentication](https://docs.expo.dev/versions/v56.0.0/sdk/local-authentication/) |
 | **Styling** | [NativeWind 4](https://www.nativewind.dev/) (Tailwind CSS for React Native) |
-| **File I/O** | [expo-file-system](https://docs.expo.dev/versions/v56.0.0/sdk/filesystem/), [expo-sharing](https://docs.expo.dev/versions/v56.0.0/sdk/sharing/), [expo-document-picker](https://docs.expo.dev/versions/v56.0.0/sdk/document-picker/) |
+| **File I/O** | [expo-file-system](https://docs.expo.dev/versions/v56.0.0/sdk/filesystem/), [expo-sharing](https://docs.expo.dev/versions/v56.0.0/sdk/sharing/), [expo-document-picker](https://docs.expo.dev/versions/v56.0.0/sdk/document-picker/) 
 | **Spreadsheet** | [SheetJS (xlsx)](https://sheetjs.com/) |
 | **Testing** | Jest + Testing Library for React Native |
 | **Build & Deploy** | [EAS Build](https://docs.expo.dev/build/introduction/) (Expo Application Services) |

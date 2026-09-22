@@ -33,7 +33,7 @@
 
 
 1. **How much money is owed to me?** — Customer credit dashboard
-2. **How did the shop perform today?** — Daily cash, M-Pesa, and expense logging
+2. **How did the shop perform today?** — Daily cash, M-Pesa, and expense 
 3. **What is the trend?** — Weekly sales charts and top-debtor rankings
 
 ## Features
